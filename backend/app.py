@@ -10,7 +10,6 @@ app = Flask(__name__)
 
 app.register_blueprint(weather.bp, url_prefix='/weather')
 
-
 @app.route('/')
 def index():
     return render_template('weather.html')
