@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}서울 교통 정보{% endblock %}
+
+{% block content %}
+<h1>🚗 서울 교통 상황</h1>
+
+<div class="traffic-layout">
+    <!-- 지도 -->
+    <div id="map"></div>
+
+    <!-- 교통 카드 -->
+    <div id="trafficCard" class="traffic-card">
+        <p class="placeholder">지도에서 도로를 선택하세요.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<style>
+    /* ===== Layout ===== */
+    .traffic-layout {
+        display: flex;
+        gap: 24px;
+    }
+
+    /* ===== Map ===== */
+    #map {
+        width: 55%;
+        height: 520px;
+        border-radius: 14px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, .15);
+    }
+
+    /* ===== Card ===== */
+    .traffic-card {
+        width: 45%;
+        border-radius: 14px;
+        padding: 24px;
+        background: #f6f8fb;
+        font-size: 14px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, .15);
+    }
+
+    .placeholder {
+        text-align: center;
+        color: #777;
+        margin-top: 200px;
+    }
+
+    .traffic-speed {
+        font-size: 38px;
+        font-weight: bold;
+        margin: 8px 0;
+    }
+
+    /* ===== Congestion Level ===== */
+    .level-1 {
+        background: #e3fcef;
+    }
+
+    .level-2 {
+        background: #fff4e5;
+    }
+
+    .level-3 {
+        background: #ffe9c7;
+    }
+
+    .level-4 {
+        background: #ffe5e5;
+    }
+
+    /* ===== Road Label ===== */
+    .road-label {
+        padding: 6px 10px;
+        border-radius: 10px;
+        font-size: 13px;
+        text-align: center;
+        white-space: nowrap;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, .25);
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="{{ url_for('static', filename='/roads.js') }}"></script>
+
+<script>
+    /* =====================
+       혼잡도 메타
+    ===================== */
+    const CONGESTION_META = {
+        1: {text: '원활', color: '#2ecc71', icon: '🟢'},
+        2: {text: '서행', color: '#f1c40f', icon: '🟡'},
+        3: {text: '혼잡', color: '#e67e22', icon: '🟠'},
+        4: {text: '정체', color: '#e74c3c', icon: '🔴'}
+    };
+
+    /* =====================
+       캐시 설정 (30분)
+    ===================== */
+    const CACHE_TTL = 30 * 60 * 1000;
+
+    function getTrafficCache(linkId) {
+        const raw = localStorage.getItem(`traffic_${linkId}`);
+        if (!raw) return null;
+
+        try {
+            const cached = JSON.parse(raw);
+            if (Date.now() - cached.savedAt > CACHE_TTL) {
+                localStorage.removeItem(`traffic_${linkId}`);
+                return null;
+            }
+            return cached.data;
+        } catch {
+            return null;
+        }
+    }
+
+    function setTrafficCache(linkId, data) {
+        localStorage.setItem(
+                `traffic_${linkId}`,
+                JSON.stringify({data, savedAt: Date.now()})
+        );
+    }
+
+    /* =====================
+       시간 포맷
+    ===================== */
+    function formatTime(sec) {
+        sec = Number(sec);
+        const h = Math.floor(sec / 3600);
+        const m = Math.floor((sec % 3600) / 60);
+        const s = sec % 60;
+
+        if (h > 0) return `${h}시간 ${m}분 ${s}초`;
+        if (m > 0) return `${m}분 ${s}초`;
+        return `${s}초`;
+    }
+
+    /* =====================
+       지도 초기화
+    ===================== */
+    const map = L.map('map').setView([37.5665, 126.9780], 11);
+
+    L.tileLayer(
+            'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
+            {
+                attribution: '&copy; OpenStreetMap & CARTO',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }
+    ).addTo(map);
+
+    /* =====================
+       도로 마커 생성
+    ===================== */
+    const roadMarkers = [];
+
+    SEOUL_ROADS.forEach(road => {
+        const marker = L.marker([road.lat, road.lng], {
+            icon: createRoadIcon(road, map.getZoom())
+        }).addTo(map);
+
+        marker.road = road;
+        marker.traffic = null;
+
+        marker.on('click', () => fetchTraffic(road, marker));
+        roadMarkers.push(marker);
+    });
+
+    /* =====================
+       줌 변경 시 라벨 갱신
+    ===================== */
+    map.on('zoomend', () => {
+        const zoom = map.getZoom();
+        roadMarkers.forEach(m => {
+            m.setIcon(createRoadIcon(m.road, zoom, m.traffic));
+        });
+    });
+
+    /* =====================
+       도로 아이콘
+    ===================== */
+    function createRoadIcon(road, zoom, traffic) {
+        let label = '🚗';
+        let bg = '#fff';
+
+        if (traffic) bg = CONGESTION_META[traffic.congestion_level].color;
+
+        if (zoom >= 13 && traffic) {
+            label = `${road.name}<br><b>${traffic.avg_speed}km/h</b>`;
+        } else if (zoom >= 11) {
+            label = road.name;
+        }
+
+        return L.divIcon({
+            html: `<div class="road-label" style="background:${bg}">${label}</div>`,
+            className: '',
+            iconSize: [120, 42],
+            iconAnchor: [60, 21]
+        });
+    }
+
+    /* =====================
+       교통 정보 조회
+    ===================== */
+    async function fetchTraffic(road, marker) {
+        const card = document.getElementById('trafficCard');
+        card.className = 'traffic-card';
+        card.innerHTML = '📡 교통 정보 불러오는 중...';
+
+        const cached = getTrafficCache(road.link_id);
+        if (cached) {
+            renderTraffic(cached, road, marker, true);
+            return;
+        }
+
+        const res = await fetch('/traffic', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(road)
+        });
+
+        const data = await res.json();
+        if (data.error) {
+            card.innerHTML = data.error;
+            return;
+        }
+
+        setTrafficCache(road.link_id, data);
+        renderTraffic(data, road, marker, false);
+    }
+
+    /* =====================
+       카드 렌더링
+    ===================== */
+    function renderTraffic(data, road, marker, fromCache) {
+        const card = document.getElementById('trafficCard');
+        const meta = CONGESTION_META[data.congestion_level];
+
+        marker.traffic = data;
+        marker.setIcon(createRoadIcon(road, map.getZoom(), data));
+
+        card.className = `traffic-card level-${data.congestion_level}`;
+        card.innerHTML = `
+        <h3>📍 ${data.road_name || road.name}</h3>
+        <div class="traffic-speed">${data.avg_speed} km/h</div>
+
+        <p>${meta.icon} 혼잡도: <b>${meta.text}</b></p>
+        <p>⏱ 예상 소요 시간: ${formatTime(data.prcs_trv_time)}</p>
+
+        <div style="
+            margin-top:14px;
+            height:8px;
+            background:#eee;
+            border-radius:4px;
+            overflow:hidden">
+            <div style="
+                width:${Math.min(100, data.avg_speed)}%;
+                height:100%;
+                background:${meta.color}">
+            </div>
+        </div>
+    `;
+    }
+</script>
+{% endblock %}

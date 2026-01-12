@@ -1,29 +1,66 @@
-from flask import Blueprint, jsonify
-from collector.weather_collector import fetch_weather, fetch_airkorea_pm_forecast, format_weather_for_ui,save_weather
+from flask import jsonify, request
+from datetime import datetime, timedelta
 
-bp = Blueprint('weather', __name__)
+from collector.weather_collector import (
+    fetch_weather,
+    fetch_airkorea_pm_forecast,
+    format_weather_for_ui,
+    save_weather
+)
+from utils.utils import latlng_to_grid
+
+# ===============================
+# 에어코리아 캐시 (메모리)
+# ===============================
+_air_cache = {
+    "data": None,
+    "expire": datetime.min
+}
 
 
-# 현재 날씨 + 미세먼지 예보 API
-@bp.route('/current/<region_code>')
-def get_current_weather(region_code):
-    # 예: 서울 종로 좌표
-    nx, ny = 60, 127
+def get_cached_air_forecast(region='서울'):
+    now = datetime.now()
 
-    weather_data = fetch_weather(nx, ny)
-    if not weather_data:
-        return jsonify({"error": "Weather data not available"}), 404
+    if _air_cache["data"] and now < _air_cache["expire"]:
+        return _air_cache["data"]
 
-    weather_ui = format_weather_for_ui(weather_data)
+    try:
+        data = fetch_airkorea_pm_forecast(region=region)
+        _air_cache["data"] = data
+        _air_cache["expire"] = now + timedelta(minutes=30)
+        return data
+    except Exception as e:
+        # 실패 시 기존 캐시라도 반환
+        return _air_cache["data"]
 
-    print('-asdasdas----------',weather_ui)
 
-    forecast = fetch_airkorea_pm_forecast(region=region_code)
+# ===============================
+# Routes
+# ===============================
+def routes(app):
+    @app.route('/weather/current')
+    def get_current_weather():
+        lat = request.args.get('lat', type=float)
+        lng = request.args.get('lng', type=float)
 
-    save_weather(region_code, weather_ui, forecast)
+        if lat is None or lng is None:
+            return jsonify({"error": "좌표가 필요합니다"}), 400
 
-    result = {
-        "weather": weather_ui,
-        "forecast": forecast
-    }
-    return jsonify(result)
+        nx, ny = latlng_to_grid(lat, lng)
+
+        weather_data = fetch_weather(nx, ny)
+        if not weather_data:
+            return jsonify({"error": "Weather data not available"}), 404
+
+        weather_ui = format_weather_for_ui(weather_data)
+
+        # 🔥 여기만 변경됨 (직접 호출 ❌ → 캐시 ⭕)
+        forecast = get_cached_air_forecast(region='서울') or {}
+
+        # 저장은 선택 (너 구조상 OK)
+        save_weather('서울', weather_ui, forecast)
+
+        return jsonify({
+            "weather": weather_ui,
+            "forecast": forecast
+        })

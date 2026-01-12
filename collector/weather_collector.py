@@ -3,6 +3,7 @@ import datetime
 from config import WEATHER_API_KEY, WEATHER_BASE_URL, AIRKOREA_API_KEY, AIRKOREA_BASE_URL, REQUEST_TIMEOUT
 from db import insert_data
 
+
 # -------------------------
 # 기상청 실황
 # -------------------------
@@ -12,6 +13,7 @@ def get_base_datetime_real_time():
     minute = (now.minute // 10) * 10
     base_time = now.replace(minute=minute, second=0, microsecond=0).strftime("%H%M")
     return now.strftime("%Y%m%d"), base_time
+
 
 def fetch_weather(nx: int, ny: int):
     base_date, base_time = get_base_datetime_real_time()
@@ -35,27 +37,47 @@ def fetch_weather(nx: int, ny: int):
         print('기상청 API 응답 오류:', data)
         return None
 
-    weather_data = {cat: None for cat in ["T1H","RN1","PTY","WSD","REH","VEC"]}
+    weather_data = {cat: None for cat in ["T1H", "RN1", "PTY", "WSD", "REH", "VEC"]}
     for item in items:
         if item['category'] in weather_data:
             weather_data[item['category']] = float(item.get('obsrValue'))
 
     return weather_data
 
+
 def get_wind_direction(vec: float) -> str:
-    directions = ["북풍","북동풍","동풍","남동풍","남풍","남서풍","서풍","북서풍"]
+    directions = ["북풍", "북동풍", "동풍", "남동풍", "남풍", "남서풍", "서풍", "북서풍"]
     return directions[int((vec + 22.5) % 360 / 45)] if vec is not None else None
 
+
 def format_weather_for_ui(weather):
-    pty_dict = {"0":"비 없음","1":"비","2":"비/눈","3":"눈","4":"소나기"}
+    pty_dict = {
+        0: "비 없음",
+        1: "비",
+        2: "비/눈",
+        3: "눈",
+        4: "소나기",
+        5: "빗방울",
+        6: "빗방울/눈날림",
+        7: "눈날림"
+    }
+
+    pty_value = weather.get("PTY")
+
+    try:
+        pty_value = int(float(pty_value))
+    except (TypeError, ValueError):
+        pty_value = None
+
     return {
         "temperature": weather.get("T1H"),
         "precipitation": weather.get("RN1"),
-        "rain_type": pty_dict.get(int(weather["PTY"]), '비 없음') if weather.get("PTY") is not None else "없음",
+        "rain_type": pty_dict.get(pty_value, "알 수 없음"),
         "wind_speed": weather.get("WSD"),
         "humidity": weather.get("REH"),
         "wind_direction": get_wind_direction(weather.get("VEC"))
     }
+
 
 # -------------------------
 # AirKorea 미세먼지 예보 통보
@@ -68,7 +90,7 @@ def fetch_airkorea_pm_forecast(region='서울'):
         'numOfRows': 100,
         'pageNo': 1,
         'searchDate': today,
-        'informCode': 'PM10'  # PM10/PM25/O3 등 예보 통보
+        'informCode': 'PM10'
     }
 
     resp = requests.get(AIRKOREA_BASE_URL, params=params, timeout=REQUEST_TIMEOUT)
@@ -93,32 +115,33 @@ def fetch_airkorea_pm_forecast(region='서울'):
         'announcement_time': forecast_today.get('dataTime')
     }
 
+
 # -------------------------
 # DB 저장
 # -------------------------
 def save_weather(region_code, weather, forecast):
     sql = """
-        INSERT INTO WEATHER (weather_id,
-                             region_code,
-                             base_date,
-                             base_time,
-                             temperature,
-                             precipitation,
-                             rain_type,
-                             wind_speed,
-                             humidity,
-                             wind_direction,
-                             air_quality_grade,
-                             air_overall,
-                             air_description,
-                             air_announcement_time,
-                             collected_at)
-        VALUES (WEATHER_SEQ.NEXTVAL,
-                :1,:2,:3,:4,:5,:6,:7,:8,:9,:10,:11,:12,:13,SYSDATE)
-    """
+          INSERT INTO WEATHER (weather_id,
+                               region_code,
+                               base_date,
+                               base_time,
+                               temperature,
+                               precipitation,
+                               rain_type,
+                               wind_speed,
+                               humidity,
+                               wind_direction,
+                               air_quality_grade,
+                               air_overall,
+                               air_description,
+                               air_announcement_time,
+                               collected_at)
+          VALUES (WEATHER_SEQ.NEXTVAL,
+                  :1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12, :13, SYSDATE) \
+          """
     now = datetime.datetime.now()
 
-    print('-----------',weather)
+    print('-----------', weather)
     params = (
         region_code,
         now.strftime("%Y%m%d"),
@@ -136,21 +159,5 @@ def save_weather(region_code, weather, forecast):
     )
     insert_data(sql, params)
 
-# -------------------------
-# 실행
-# -------------------------
 if __name__ == '__main__':
-    region_code = '서울'
-    weather = fetch_weather(nx=60, ny=127)
-    weather_ui = format_weather_for_ui(weather)
-    forecast = fetch_airkorea_pm_forecast(region='서울')
-
-    print(f"🌤 WEATHER_OBSR | 지역={region_code}")
-    for k,v in weather_ui.items():
-        print(f"{k}: {v}")
-    print("💨 AirKorea 미세먼지 예보")
-    print(f"서울 등급: {forecast['region_grade']}")
-    print(f"전체 등급: {forecast['overall']}")
-    print(f"설명: {forecast['description']}")
-
-    save_weather(region_code, weather_ui, forecast)
+    fetch_weather(60,127)

@@ -19,17 +19,17 @@ def get_connection():
     return conn
 
 
-def insert_data(sql:str,params:tuple):
-    conn=None
-    cursor=None
+def insert_data(sql: str, params: tuple):
+    conn = None
+    cursor = None
 
     try:
-        conn=get_connection()
-        cursor=conn.cursor()
-        cursor.execute(sql,params)
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(sql, params)
         conn.commit()
     except cx_Oracle.DatabaseError as e:
-        print('DB insert error:',e)
+        print('DB insert error:', e)
         if conn:
             conn.rollback()
     finally:
