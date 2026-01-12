@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>현재 날씨</title>
+<style>
+  body { font-family: Arial; padding: 20px; }
+  .card { border: 1px solid #ccc; padding: 15px; margin-bottom: 10px; border-radius: 8px; width: 300px;}
+</style>
+</head>
+<body>
+<h1>현재 날씨 / 미세먼지 예보</h1>
+<div id="weatherCard" class="card">
+  <p>로딩 중...</p>
+</div>
+
+<script>
+async function fetchWeather() {
+    const res = await fetch('/weather/current/서울');
+    const data = await res.json();
+    const card = document.getElementById('weatherCard');
+
+    if (data.error) {
+        card.innerHTML = `<p>${data.error}</p>`;
+        return;
+    }
+
+    const w = data.weather;
+    const f = data.forecast;
+
+    card.innerHTML = `
+        <h3>날씨</h3>
+        <p>기온: ${w.temperature}°C</p>
+        <p>습도: ${w.humidity}%</p>
+        <p>풍속: ${w.wind_speed} m/s</p>
+        <p>강수량: ${w.precipitation || 0} mm</p>
+        <p>강수 형태: ${w.rain_type}</p>
+        <p>풍향: ${w.wind_direction}</p>
+        <h3>미세먼지 예보</h3>
+        <p>서울 등급: ${f.region_grade}</p>
+        <p>전체 등급: ${f.overall}</p>
+        <p>설명: ${f.description}</p>
+        <p>발표 시각: ${f.announcement_time}</p>
+    `;
+}
+
+fetchWeather();
+</script>
+</body>
+</html>
