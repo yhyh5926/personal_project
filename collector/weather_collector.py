@@ -1,6 +1,6 @@
 import requests
 import datetime
-from config import WEATHER_API_KEY, WEATHER_BASE_URL, AIRKOREA_API_KEY, AIRKOREA_BASE_URL, REQUEST_TIMEOUT
+from config import WEATHER_API_KEY, WEATHER_BASE_URL, REQUEST_TIMEOUT, SEOUL_AIR_BASE_URL, SEOUL_AIR_API_KEY
 from db import insert_data
 
 
@@ -80,84 +80,75 @@ def format_weather_for_ui(weather):
 
 
 # -------------------------
-# AirKorea 미세먼지 예보 통보
+# 미세먼지 데이터
 # -------------------------
-def fetch_airkorea_pm_forecast(region='서울'):
-    today = datetime.datetime.now().strftime("%Y-%m-%d")
-    params = {
-        'serviceKey': AIRKOREA_API_KEY,
-        'returnType': 'json',
-        'numOfRows': 100,
-        'pageNo': 1,
-        'searchDate': today,
-        'informCode': 'PM10'
-    }
 
-    resp = requests.get(AIRKOREA_BASE_URL, params=params, timeout=REQUEST_TIMEOUT)
-    resp.raise_for_status()
-    data = resp.json()
-    items = data.get('response', {}).get('body', {}).get('items', [])
+def fetch_air_quality_by_district(district_name):
+    service = "ListAirQualityByDistrictService"
+    url = f"{SEOUL_AIR_BASE_URL}/{SEOUL_AIR_API_KEY}/json/{service}/1/25"
 
-    if not items:
-        return {"region_grade": None, "overall": None, "description": None}
+    response = requests.get(url, timeout=REQUEST_TIMEOUT)
+    response.raise_for_status()
 
-    # 오늘 기준 첫 번째 예보
-    forecast_today = next((item for item in items if item['informData'] == today), items[0])
+    data = response.json()
+    row_list = data.get(service, {}).get("row", [])
 
-    # 서울 기준 등급
-    grade_list = forecast_today.get('informGrade', "").split(',')
-    region_grade = next((g.split(':')[1].strip() for g in grade_list if g.startswith(region)), None)
+    for row in row_list:
+        if row.get("MSRSTN_NM") == district_name:
+            # Return only user-friendly essential information
+            return {
+                "district": row.get("MSRSTN_NM"),
+                "measured_at": row.get("MSRMT_YMD"),
+                "air_grade": row.get("CAI_GRD"),
+                "pm10": row.get("PM"),
+                "pm2_5": row.get("FPM"),
+                "main_pollutant": row.get("CRST_SBSTN")
+            }
 
-    return {
-        'region_grade': region_grade,
-        'overall': forecast_today.get('informOverall'),
-        'description': forecast_today.get('informCause'),
-        'announcement_time': forecast_today.get('dataTime')
-    }
+    return None
 
 
 # -------------------------
 # DB 저장
 # -------------------------
-def save_weather(region_code, weather, forecast):
+def save_weather(region, weather):
     sql = """
           INSERT INTO WEATHER (weather_id,
-                               region_code,
-                               base_date,
-                               base_time,
+                               region,
                                temperature,
                                precipitation,
                                rain_type,
                                wind_speed,
                                humidity,
                                wind_direction,
-                               air_quality_grade,
-                               air_overall,
-                               air_description,
-                               air_announcement_time,
+                               air_grade,
+                               pm10,
+                               pm25,
+                               main_pollutant,
+                               measured_at,
                                collected_at)
           VALUES (WEATHER_SEQ.NEXTVAL,
-                  :1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12, :13, SYSDATE) \
+                  :1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11,
+                  :12, SYSDATE) \
           """
-    now = datetime.datetime.now()
 
-    print('-----------', weather)
+    w = weather.get("weather")
+    a = weather.get("air")
+
     params = (
-        region_code,
-        now.strftime("%Y%m%d"),
-        now.strftime("%H%M"),
-        weather.get("temperature"),
-        weather.get("precipitation"),
-        weather.get("rain_type"),
-        weather.get("wind_speed"),
-        weather.get("humidity"),
-        weather.get("wind_direction"),
-        forecast.get('region_grade'),
-        forecast.get('overall'),
-        forecast.get('description'),
-        forecast.get('announcement_time')
+        region,
+        w.get("temperature"),
+        w.get("precipitation"),
+        w.get("rain_type"),
+        w.get("wind_speed"),
+        w.get("humidity"),
+        w.get("wind_direction"),
+        a.get('air_grade'),
+        a.get('pm10'),
+        a.get('pm2_5'),
+        a.get('main_pollutant'),
+        a.get("measured_at")
     )
+
     insert_data(sql, params)
 
-if __name__ == '__main__':
-    fetch_weather(60,127)

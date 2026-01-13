@@ -27,17 +27,18 @@
     #map {
         width: 58%;
         height: 520px;
-        border-radius: 14px;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, .15);
+        border-radius: 16px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     }
 
     /* 카드 */
     .weather-card {
         width: 42%;
         background: #fff;
-        border-radius: 14px;
+        border-radius: 16px;
         padding: 24px;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, .15);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+        font-family: "Noto Sans KR", sans-serif;
     }
 
     .placeholder {
@@ -46,51 +47,93 @@
         color: #777;
     }
 
-    /* 지도 라벨 */
-    .weather-label {
-        background: rgba(255, 255, 255, .95);
-        border-radius: 10px;
-        text-align: center;
-        line-height: 1.2;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, .25);
-    }
-
-    /* 카드 내부 */
+    /* 카드 헤더 */
     .card-header {
         display: flex;
         align-items: center;
         gap: 16px;
+        margin-bottom: 20px;
     }
 
     .card-icon {
-        font-size: 48px;
+        font-size: 52px;
+    }
+
+    .card-info {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
     }
 
     .card-temp {
-        font-size: 38px;
+        font-size: 36px;
         font-weight: bold;
     }
 
+    .measured-at {
+        font-size: 13px;
+        color: #555;
+    }
+
+    /* 메타 그리드 */
     .meta-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 12px;
-        margin-top: 20px;
+        margin-bottom: 20px;
     }
 
     .meta-item {
         background: #f4f6fa;
-        border-radius: 10px;
-        padding: 12px;
+        border-radius: 12px;
+        padding: 14px;
         text-align: center;
-        font-size: 13px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: background 0.2s ease;
     }
 
-    .pm-box {
-        margin-top: 18px;
-        padding: 14px;
+    .meta-item:hover {
+        background: #e2e8f0;
+    }
+
+    hr {
+        border: none;
+        border-top: 1px solid #e2e8f0;
+        margin: 24px 0;
+    }
+
+    /* 공기질 */
+    .air-quality h4 {
+        margin-bottom: 12px;
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+    .air-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* 지도 라벨 */
+    .weather-label {
+        background: rgba(255, 255, 255, 0.95);
         border-radius: 10px;
-        background: #eef3ff;
+        text-align: center;
+        line-height: 1.2;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, border 0.15s ease;
+    }
+
+    .weather-label:hover {
+        transform: scale(1.05);
+    }
+
+    .weather-label.active {
+        border: 2px solid #4f7cff;
+        box-shadow: 0 10px 25px rgba(79, 124, 255, 0.45);
+        transform: scale(1.08);
+        z-index: 10;
     }
 </style>
 {% endblock %}
@@ -100,15 +143,12 @@
 <script src="{{ url_for('static', filename='/districts.js') }}"></script>
 
 <script>
-    /* =====================
-       캐시 설정 (20분)
-    ===================== */
-    const CACHE_TTL = 20 * 60 * 1000;
+    // 캐시 설정
+    const CACHE_TTL = 60 * 60 * 1000;
 
     function getCache(key) {
         const raw = localStorage.getItem(key);
         if (!raw) return null;
-
         const {time, data} = JSON.parse(raw);
         if (Date.now() - time > CACHE_TTL) {
             localStorage.removeItem(key);
@@ -118,15 +158,10 @@
     }
 
     function setCache(key, data) {
-        localStorage.setItem(key, JSON.stringify({
-            time: Date.now(),
-            data
-        }));
+        localStorage.setItem(key, JSON.stringify({time: Date.now(), data}));
     }
 
-    /* =====================
-       날씨 상태 매핑
-    ===================== */
+    // 날씨 상태
     const WEATHER_STATUS = {
         '비 없음': {icon: '☀️', text: '맑음'},
         '비': {icon: '🌧', text: '비'},
@@ -135,25 +170,16 @@
         '비/눈': {icon: '🌨', text: '비/눈'}
     };
 
-    /* =====================
-       지도 초기화
-    ===================== */
+    // 지도 초기화
     const map = L.map('map').setView([37.5665, 126.9780], 11);
-
-    L.tileLayer(
-            'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
-            {
-                attribution: '&copy; OpenStreetMap & CARTO',
-                subdomains: 'abcd',
-                maxZoom: 19
-            }
-    ).addTo(map);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap & CARTO',
+        subdomains: 'abcd',
+        maxZoom: 19
+    }).addTo(map);
 
     const markers = [];
 
-    /* =====================
-       줌별 라벨 스펙
-    ===================== */
     function getLabelSpec(zoom) {
         if (zoom >= 12) return {font: 14, pad: '6px 10px', size: [95, 48]};
         if (zoom >= 11) return {font: 12, pad: '4px 8px', size: [80, 40]};
@@ -161,72 +187,47 @@
         return null;
     }
 
-    /* =====================
-       아이콘 생성
-    ===================== */
     function createIcon(d, temp, rainType, zoom) {
         const spec = getLabelSpec(zoom);
         if (!spec) return null;
-
         const status = WEATHER_STATUS[rainType] || WEATHER_STATUS['비 없음'];
-
         return L.divIcon({
             className: '',
-            html: `
-        <div class="weather-label"
-             style="font-size:${spec.font}px; padding:${spec.pad}">
-            <div>${d.name}</div>
-            <div><b>${status.icon} ${temp}°C</b></div>
-        </div>
-        `,
+            html: `<div class="weather-label"><div>${d.name}</div><div><b>${status.icon} ${temp}°C</b></div></div>`,
             iconSize: spec.size,
             iconAnchor: [spec.size[0] / 2, spec.size[1] / 2]
         });
     }
 
-    /* =====================
-       구별 날씨 로드
-    ===================== */
+    // 구별 날씨 로드
     async function loadDistrict(d) {
         const key = `weather_${d.name}`;
         let data = getCache(key);
-
         if (!data) {
-            const res = await fetch(`/weather/current?lat=${d.lat}&lng=${d.lng}`);
+            const res = await fetch(`/api/weather?lat=${d.lat}&lng=${d.lng}&district=${d.name}`);
             data = await res.json();
             if (data.error) return;
             setCache(key, data);
         }
 
         const w = data.weather;
-
         const marker = L.marker([d.lat, d.lng]).addTo(map);
-        marker._weather = {
-            district: d,
-            temp: w.temperature,
-            rainType: w.rain_type,
-            data
-        };
-
+        marker._weather = {district: d, temp: w.temperature, rainType: w.rain_type, data};
         marker.setIcon(createIcon(d, w.temperature, w.rain_type, map.getZoom()));
-        marker.on('click', () => showDetail(d.name, data));
-
+        marker.on('click', () => {
+            document.querySelectorAll('.weather-label.active').forEach(el => el.classList.remove('active'));
+            const el = marker.getElement()?.querySelector('.weather-label');
+            if (el) el.classList.add('active');
+            showDetail(d.name, data);
+        });
         markers.push(marker);
     }
 
-    /* =====================
-       줌 변경 대응
-    ===================== */
+    // 줌 변경
     map.on('zoomend', () => {
         const zoom = map.getZoom();
         markers.forEach(m => {
-            const icon = createIcon(
-                    m._weather.district,
-                    m._weather.temp,
-                    m._weather.rainType,
-                    zoom
-            );
-
+            const icon = createIcon(m._weather.district, m._weather.temp, m._weather.rainType, zoom);
             if (icon) {
                 m.setOpacity(1);
                 m.setIcon(icon);
@@ -236,42 +237,55 @@
         });
     });
 
-    /* =====================
-       상세 카드
-    ===================== */
+    // 발표시간 포맷
+    function formatMeasuredAt(raw) {
+        const year = raw.slice(0, 4);
+        const month = parseInt(raw.slice(4, 6), 10);
+        const day = parseInt(raw.slice(6, 8), 10);
+        const hour = parseInt(raw.slice(8, 10), 10);
+        const min = raw.slice(10, 12);
+        return `${year}년 ${month}월 ${day}일 ${hour}시${min !== '00'? min+'분':''}`;
+    }
+
+    // 상세 카드
     function showDetail(name, data) {
         const w = data.weather;
-        const f = data.forecast;
+        const a = data.air;
         const status = WEATHER_STATUS[w.rain_type] || WEATHER_STATUS['비 없음'];
 
         document.getElementById('weatherCard').innerHTML = `
-    <div class="card-header">
-        <div class="card-icon">${status.icon}</div>
-        <div>
-            <strong>${name}</strong>
-            <div class="card-temp">${w.temperature}°C</div>
-            <small>${status.text}</small>
-        </div>
+<div class="card-header">
+    <div class="card-icon">${status.icon}</div>
+    <div class="card-info">
+        <strong>${name}</strong>
+        <div class="card-temp">${w.temperature}°C</div>
+        <small>${status.text}</small>
+        <div class="measured-at">🕒 발표 시간: ${formatMeasuredAt(a.measured_at)}</div>
     </div>
+</div>
 
-    <div class="meta-grid">
-        <div class="meta-item">💧 습도<br>${w.humidity}%</div>
-        <div class="meta-item">💨 풍속<br>${w.wind_speed} m/s</div>
-        <div class="meta-item">☔ 강수량<br>${w.precipitation || 0} mm</div>
-        <div class="meta-item">🧭 풍향<br>${w.wind_direction}</div>
-    </div>
+<div class="meta-grid">
+    <div class="meta-item">💧 습도<br>${w.humidity}%</div>
+    <div class="meta-item">💨 풍속<br>${w.wind_speed} m/s</div>
+    <div class="meta-item">☔ 강수량<br>${w.precipitation || 0} mm</div>
+    <div class="meta-item">🧭 풍향<br>${w.wind_direction}</div>
+</div>
 
-    <div class="pm-box">
-        <strong>😷 미세먼지</strong><br>
-        ${f.overall.replace('○','')}<br>
-        <small>${f.description.replace('○','')}</small>
+<hr>
+
+<div class="air-quality">
+    <h4>대기환경</h4>
+    <div class="meta-grid air-grid">
+        <div class="meta-item">🏙️ 대기질<br>${a.air_grade}</div>
+        <div class="meta-item">🌫️ 미세먼지<br>${a.pm10} µg/m³</div>
+        <div class="meta-item">🌫️ 초미세먼지<br>${a.pm2_5} µg/m³</div>
+        <div class="meta-item">⚠️ 주요 오염물질<br>${a.main_pollutant}</div>
     </div>
-    `;
+</div>`;
     }
 
-    /* =====================
-       초기 실행
-    ===================== */
+    // 초기 실행
     SEOUL_DISTRICTS.forEach(loadDistrict);
+
 </script>
 {% endblock %}

@@ -4,7 +4,7 @@ from collector.traffic_collector import fetch_traffic
 
 
 def routes(app):
-    @app.route("/traffic", methods=['POST'])
+    @app.route("/api/traffic", methods=['POST'])
     def traffic_api():
         road = request.get_json()
         data = fetch_traffic(road)

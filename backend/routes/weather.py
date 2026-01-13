@@ -1,66 +1,51 @@
 from flask import jsonify, request
-from datetime import datetime, timedelta
 
 from collector.weather_collector import (
     fetch_weather,
-    fetch_airkorea_pm_forecast,
     format_weather_for_ui,
+    fetch_air_quality_by_district,
     save_weather
 )
 from utils.utils import latlng_to_grid
 
-# ===============================
-# 에어코리아 캐시 (메모리)
-# ===============================
-_air_cache = {
-    "data": None,
-    "expire": datetime.min
-}
 
-
-def get_cached_air_forecast(region='서울'):
-    now = datetime.now()
-
-    if _air_cache["data"] and now < _air_cache["expire"]:
-        return _air_cache["data"]
-
-    try:
-        data = fetch_airkorea_pm_forecast(region=region)
-        _air_cache["data"] = data
-        _air_cache["expire"] = now + timedelta(minutes=30)
-        return data
-    except Exception as e:
-        # 실패 시 기존 캐시라도 반환
-        return _air_cache["data"]
-
-
-# ===============================
-# Routes
-# ===============================
 def routes(app):
-    @app.route('/weather/current')
+    @app.route('/api/weather')
     def get_current_weather():
         lat = request.args.get('lat', type=float)
         lng = request.args.get('lng', type=float)
+        district = request.args.get('district')
 
         if lat is None or lng is None:
             return jsonify({"error": "좌표가 필요합니다"}), 400
 
+        # 격자 구하기
         nx, ny = latlng_to_grid(lat, lng)
 
         weather_data = fetch_weather(nx, ny)
+        air_data = fetch_air_quality_by_district(district)
+
         if not weather_data:
             return jsonify({"error": "Weather data not available"}), 404
 
-        weather_ui = format_weather_for_ui(weather_data)
+        if not air_data:
+            return jsonify({'error': 'air data not available'}), 404
 
-        # 🔥 여기만 변경됨 (직접 호출 ❌ → 캐시 ⭕)
-        forecast = get_cached_air_forecast(region='서울') or {}
+        formatted_weather = format_weather_for_ui(weather_data)
 
-        # 저장은 선택 (너 구조상 OK)
-        save_weather('서울', weather_ui, forecast)
+        # 공기 데이터 간단히 정리
+        air_info = {
+            "air_grade": air_data.get("air_grade", "정보 없음"),
+            "pm10": air_data.get("pm10", "-"),
+            "pm2_5": air_data.get("pm2_5", "-"),
+            "main_pollutant": air_data.get("main_pollutant", "-"),
+            "measured_at": air_data.get("measured_at", "-")
+        }
 
-        return jsonify({
-            "weather": weather_ui,
-            "forecast": forecast
-        })
+        # 날씨 + 공기 데이터 통합 리턴
+        response = {
+            "weather": formatted_weather,
+            "air": air_info
+        }
+        save_weather(district, response)
+        return jsonify(response)

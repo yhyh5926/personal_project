@@ -102,9 +102,9 @@
     };
 
     /* =====================
-       캐시 설정 (30분)
+       캐시 설정 (60분)
     ===================== */
-    const CACHE_TTL = 30 * 60 * 1000;
+    const CACHE_TTL = 60 * 60 * 1000;
 
     function getTrafficCache(linkId) {
         const raw = localStorage.getItem(`traffic_${linkId}`);
@@ -221,7 +221,7 @@
             return;
         }
 
-        const res = await fetch('/traffic', {
+        const res = await fetch('/api/traffic', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(road)

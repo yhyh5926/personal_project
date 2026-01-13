@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}서울 지하철 정보{% endblock %}
+
+{% block content %}
+<h1>🚇 서울 지하철 실시간 도착 정보</h1>
+
+<div class="traffic-layout">
+    <div id="map"></div>
+
+    <div id="trafficCard" class="traffic-card">
+        <p class="placeholder">지도에서 역을 클릭하세요.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<style>
+    .traffic-layout {
+        display: flex;
+        gap: 24px;
+    }
+
+    #map {
+        width: 55%;
+        height: 520px;
+        border-radius: 14px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, .15);
+    }
+
+    .traffic-card {
+        width: 45%;
+        border-radius: 14px;
+        padding: 24px;
+        background: #f6f8fb;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, .15);
+        font-size: 14px;
+    }
+
+    .placeholder {
+        text-align: center;
+        color: #777;
+        margin-top: 200px;
+    }
+
+    .station-label {
+        padding: 6px 10px;
+        border-radius: 10px;
+        font-size: 13px;
+        background: #fff;
+        white-space: nowrap;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, .25);
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="{{ url_for('static', filename='stations.js') }}"></script>
+
+<script>
+    /* =====================
+       지도 초기화
+    ===================== */
+    const map = L.map('map').setView([37.5665, 126.9780], 11);
+
+    L.tileLayer(
+            'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
+            {
+                attribution: '&copy; OpenStreetMap & CARTO',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }
+    ).addTo(map);
+
+    /* =====================
+       역 마커 생성
+    ===================== */
+    const stationMarkers = [];
+
+    SEOUL_STATIONS.forEach(station => {
+        const marker = L.marker(
+                [station.lat, station.lng],
+                {icon: createStationIcon(station, map.getZoom())}
+        ).addTo(map);
+
+        marker.station = station;
+        marker.on('click', () => fetchSubway(station.name));
+
+        stationMarkers.push(marker);
+    });
+
+    /* =====================
+       줌 변경 시 라벨 갱신
+    ===================== */
+    map.on('zoomend', () => {
+        const zoom = map.getZoom();
+        stationMarkers.forEach(m => {
+            m.setIcon(createStationIcon(m.station, zoom));
+        });
+    });
+
+    /* =====================
+       라벨 아이콘
+    ===================== */
+    function createStationIcon(station, zoom) {
+        let label = '🚇';
+        if (zoom >= 12) label = station.name;
+
+        return L.divIcon({
+            html: `<div class="station-label">${label}</div>`,
+            className: '',
+            iconSize: [100, 36],
+            iconAnchor: [50, 18]
+        });
+    }
+
+    /* =====================
+       지하철 API 호출
+    ===================== */
+    async function fetchSubway(station_name) {
+        const card = document.getElementById('trafficCard');
+        card.innerHTML = '🚇 지하철 정보 불러오는 중...';
+
+        try {
+            const res = await fetch(`/api/subway?station=${station_name}`);
+
+            const data = await res.json();
+            if (data.error) {
+                card.innerHTML = data.error;
+                return;
+            }
+
+            renderSubwayCard(data);
+        } catch (e) {
+            card.innerHTML = '❌ 정보를 불러오지 못했습니다.';
+        }
+    }
+
+    /* =====================
+       카드 렌더링
+    ===================== */
+    function renderSubwayCard(data) {
+        const card = document.getElementById('trafficCard');
+        console.log('요청 성공',data)
+        card.innerHTML = `
+        <h3>🚉 ${data.current_station}</h3>
+
+        <p>🚇 노선: <b>${data.line}</b></p>
+        <p>🚆 열차 종류: ${data.train_type || '-'}</p>
+        <p>↕️ 방향: ${data.direction}</p>
+        <p>🎯 종착역: ${data.destination}</p>
+
+        <hr>
+
+        <h2 style="font-size:32px;margin:12px 0">
+            ⏱ ${data.arrival_in}
+        </h2>
+
+        <p>📢 ${data.arrival_message}</p>
+    `;
+    }
+</script>
+{% endblock %}
