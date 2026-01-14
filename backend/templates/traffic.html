@@ -3,15 +3,52 @@
 {% block title %}서울 교통 정보{% endblock %}
 
 {% block content %}
-<h1>🚗 서울 교통 상황</h1>
+<div class="traffic-container">
+    <div class="traffic-header">
+        <div class="header-content">
+            <h1 class="main-title">
+                <span class="icon">🚗</span>
+                서울 실시간 교통 정보
+            </h1>
+            <p class="subtitle">지도에서 도로를 선택하여 실시간 교통 상황을 확인하세요</p>
+        </div>
+    </div>
 
-<div class="traffic-layout">
-    <!-- 지도 -->
-    <div id="map"></div>
+    <div class="content-grid">
+        <div class="map-section">
+            <div id="map" class="map-container"></div>
+            <div class="legend">
+                <div class="legend-title">교통 상황</div>
+                <div class="legend-items">
+                    <div class="legend-item">
+                        <div class="legend-color level-1-color"></div>
+                        <span>🟢 원활</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color level-2-color"></div>
+                        <span>🟡 서행</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color level-3-color"></div>
+                        <span>🟠 혼잡</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color level-4-color"></div>
+                        <span>🔴 정체</span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <!-- 교통 카드 -->
-    <div id="trafficCard" class="traffic-card">
-        <p class="placeholder">지도에서 도로를 선택하세요.</p>
+        <div class="info-section">
+            <div id="trafficCard" class="info-card">
+                <div class="empty-state">
+                    <div class="empty-icon">🗺️</div>
+                    <h3>도로를 선택해주세요</h3>
+                    <p>지도에서 원하는 도로를 클릭하면<br>실시간 교통 상황을 확인할 수 있습니다</p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -20,68 +57,442 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
 <style>
-    /* ===== Layout ===== */
-    .traffic-layout {
-        display: flex;
-        gap: 24px;
-    }
 
-    /* ===== Map ===== */
-    #map {
-        width: 55%;
-        height: 520px;
-        border-radius: 14px;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, .15);
-    }
-
-    /* ===== Card ===== */
-    .traffic-card {
-        width: 45%;
-        border-radius: 14px;
+    .traffic-container {
+        max-width: 1400px;
+        margin: 0 auto;
         padding: 24px;
-        background: #f6f8fb;
+    }
+
+    .traffic-header {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 32px;
+        margin-bottom: 24px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        backdrop-filter: blur(10px);
+    }
+
+    .main-title {
+        font-size: 36px;
+        font-weight: 800;
+        color: #1a202c;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+    }
+
+    .main-title .icon {
+        font-size: 42px;
+        animation: drive 2s ease-in-out infinite;
+    }
+
+    @keyframes drive {
+        0%, 100% {
+            transform: translateX(0);
+        }
+        50% {
+            transform: translateX(10px);
+        }
+    }
+
+    .subtitle {
+        font-size: 16px;
+        color: #718096;
+        margin-left: 54px;
+    }
+
+    .content-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 24px;
+        align-items: start;
+    }
+
+    .map-section {
+        position: relative;
+    }
+
+    .map-container {
+        width: 100%;
+        height: 600px;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        border: 4px solid rgba(255, 255, 255, 0.9);
+    }
+
+    .legend {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        padding: 16px 20px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+    }
+
+    .legend-title {
         font-size: 14px;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, .15);
+        font-weight: 700;
+        color: #1a202c;
+        margin-bottom: 12px;
     }
 
-    .placeholder {
-        text-align: center;
-        color: #777;
-        margin-top: 200px;
+    .legend-items {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
     }
 
-    .traffic-speed {
-        font-size: 38px;
-        font-weight: bold;
-        margin: 8px 0;
-    }
-
-    /* ===== Congestion Level ===== */
-    .level-1 {
-        background: #e3fcef;
-    }
-
-    .level-2 {
-        background: #fff4e5;
-    }
-
-    .level-3 {
-        background: #ffe9c7;
-    }
-
-    .level-4 {
-        background: #ffe5e5;
-    }
-
-    /* ===== Road Label ===== */
-    .road-label {
-        padding: 6px 10px;
-        border-radius: 10px;
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
         font-size: 13px;
+        font-weight: 600;
+        color: #4b5563;
+    }
+
+    .legend-color {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    .level-1-color {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+
+    .level-2-color {
+        background: linear-gradient(135deg, #facc15 0%, #eab308 100%);
+    }
+
+    .level-3-color {
+        background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    }
+
+    .level-4-color {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+
+    .info-section {
+        position: sticky;
+        top: 24px;
+    }
+
+    .info-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 32px;
+        min-height: 600px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+        overflow-y: auto;
+        max-height: 600px;
+        transition: all 0.3s ease;
+    }
+
+    .info-card::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .info-card::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    .info-card::-webkit-scrollbar-thumb {
+        background: #667eea;
+        border-radius: 10px;
+    }
+
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        text-align: center;
+        color: #718096;
+    }
+
+    .empty-icon {
+        font-size: 80px;
+        margin-bottom: 20px;
+        opacity: 0.6;
+    }
+
+    .empty-state h3 {
+        font-size: 24px;
+        color: #2d3748;
+        margin-bottom: 12px;
+    }
+
+    .empty-state p {
+        font-size: 15px;
+        line-height: 1.6;
+    }
+
+    /* Traffic Card States */
+    .traffic-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 16px;
+        padding: 28px;
+        color: white;
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        animation: slideIn 0.4s ease-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .traffic-card.level-1 {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+
+    .traffic-card.level-2 {
+        background: linear-gradient(135deg, #facc15 0%, #eab308 100%);
+    }
+
+    .traffic-card.level-3 {
+        background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    }
+
+    .traffic-card.level-4 {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .road-name {
+        font-size: 26px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .speed-display {
+        background: rgba(255, 255, 255, 0.95);
+        color: #1a202c;
+        padding: 24px;
+        border-radius: 16px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .speed-value {
+        font-size: 56px;
+        font-weight: 900;
+        line-height: 1;
+        margin-bottom: 8px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .speed-unit {
+        font-size: 18px;
+        color: #718096;
+        font-weight: 600;
+    }
+
+    .traffic-info {
+        display: grid;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .info-item {
+        background: rgba(255, 255, 255, 0.15);
+        padding: 16px;
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .info-icon {
+        font-size: 24px;
+    }
+
+    .info-text {
+        flex: 1;
+    }
+
+    .info-label {
+        font-size: 13px;
+        opacity: 0.9;
+        margin-bottom: 4px;
+    }
+
+    .info-value {
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 6px;
+        transition: width 0.6s ease;
+    }
+
+    .road-label {
+        display: inline-block;
+        padding: 8px 14px;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 600;
         text-align: center;
         white-space: nowrap;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, .25);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px solid rgba(255, 255, 255, 0.8);
+    }
+
+    .road-label:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .loading-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        gap: 16px;
+    }
+
+    .loading-spinner {
+        width: 60px;
+        height: 60px;
+        border: 4px solid rgba(102, 126, 234, 0.2);
+        border-top-color: #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .loading-text {
+        font-size: 18px;
+        color: #667eea;
+        font-weight: 600;
+    }
+
+    .cache-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        background: rgba(255, 255, 255, 0.25);
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+        margin-top: 12px;
+    }
+
+    @media (max-width: 1024px) {
+        .content-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .info-section {
+            position: static;
+        }
+
+        .map-container {
+            height: 400px;
+        }
+
+        .legend {
+            bottom: 12px;
+            left: 12px;
+            padding: 12px 16px;
+        }
+
+        .legend-title {
+            font-size: 13px;
+        }
+
+        .legend-item {
+            font-size: 12px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+        }
+
+        .info-card {
+            min-height: 400px;
+            max-height: none;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .main-title {
+            font-size: 28px;
+        }
+
+        .main-title .icon {
+            font-size: 32px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            margin-left: 44px;
+        }
+
+        .speed-value {
+            font-size: 48px;
+        }
+
+        .legend {
+            padding: 10px 14px;
+        }
+
+        .legend-items {
+            gap: 6px;
+        }
+
+        .legend-item {
+            font-size: 11px;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 18px;
+            height: 18px;
+        }
     }
 </style>
 {% endblock %}
@@ -91,19 +502,13 @@
 <script src="{{ url_for('static', filename='/roads.js') }}"></script>
 
 <script>
-    /* =====================
-       혼잡도 메타
-    ===================== */
     const CONGESTION_META = {
-        1: {text: '원활', color: '#2ecc71', icon: '🟢'},
-        2: {text: '서행', color: '#f1c40f', icon: '🟡'},
-        3: {text: '혼잡', color: '#e67e22', icon: '🟠'},
-        4: {text: '정체', color: '#e74c3c', icon: '🔴'}
+        1: {text: '원활', color: '#10b981', gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', icon: '🟢'},
+        2: {text: '서행', color: '#e5f50b', gradient: 'linear-gradient(135deg, #facc15 0%, #eab308 100%)', icon: '🟡'},
+        3: {text: '혼잡', color: '#f97316', gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', icon: '🟠'},
+        4: {text: '정체', color: '#ef4444', gradient: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', icon: '🔴'}
     };
 
-    /* =====================
-       캐시 설정 (60분)
-    ===================== */
     const CACHE_TTL = 60 * 60 * 1000;
 
     function getTrafficCache(linkId) {
@@ -129,27 +534,21 @@
         );
     }
 
-    /* =====================
-       시간 포맷
-    ===================== */
     function formatTime(sec) {
         sec = Number(sec);
         const h = Math.floor(sec / 3600);
         const m = Math.floor((sec % 3600) / 60);
         const s = sec % 60;
 
-        if (h > 0) return `${h}시간 ${m}분 ${s}초`;
+        if (h > 0) return `${h}시간 ${m}분`;
         if (m > 0) return `${m}분 ${s}초`;
         return `${s}초`;
     }
 
-    /* =====================
-       지도 초기화
-    ===================== */
     const map = L.map('map').setView([37.5665, 126.9780], 11);
 
     L.tileLayer(
-            'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
+            'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
             {
                 attribution: '&copy; OpenStreetMap & CARTO',
                 subdomains: 'abcd',
@@ -157,9 +556,6 @@
             }
     ).addTo(map);
 
-    /* =====================
-       도로 마커 생성
-    ===================== */
     const roadMarkers = [];
 
     SEOUL_ROADS.forEach(road => {
@@ -174,9 +570,6 @@
         roadMarkers.push(marker);
     });
 
-    /* =====================
-       줌 변경 시 라벨 갱신
-    ===================== */
     map.on('zoomend', () => {
         const zoom = map.getZoom();
         roadMarkers.forEach(m => {
@@ -184,14 +577,14 @@
         });
     });
 
-    /* =====================
-       도로 아이콘
-    ===================== */
     function createRoadIcon(road, zoom, traffic) {
         let label = '🚗';
         let bg = '#fff';
 
-        if (traffic) bg = CONGESTION_META[traffic.congestion_level].color;
+        if (traffic) {
+            const meta = CONGESTION_META[traffic.congestion_level];
+            bg = meta.gradient;
+        }
 
         if (zoom >= 13 && traffic) {
             label = `${road.name}<br><b>${traffic.avg_speed}km/h</b>`;
@@ -200,20 +593,22 @@
         }
 
         return L.divIcon({
-            html: `<div class="road-label" style="background:${bg}">${label}</div>`,
+            html: `<div class="road-label" style="background:${bg}; color: ${traffic ? '#fff' : '#1a202c'}">${label}</div>`,
             className: '',
             iconSize: [120, 42],
             iconAnchor: [60, 21]
         });
     }
 
-    /* =====================
-       교통 정보 조회
-    ===================== */
     async function fetchTraffic(road, marker) {
         const card = document.getElementById('trafficCard');
-        card.className = 'traffic-card';
-        card.innerHTML = '📡 교통 정보 불러오는 중...';
+        card.className = 'info-card';
+        card.innerHTML = `
+            <div class="loading-state">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">교통 정보를 불러오는 중...</div>
+            </div>
+        `;
 
         const cached = getTrafficCache(road.link_id);
         if (cached) {
@@ -221,25 +616,38 @@
             return;
         }
 
-        const res = await fetch('/api/traffic', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(road)
-        });
+        try {
+            const res = await fetch('/api/traffic', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(road)
+            });
 
-        const data = await res.json();
-        if (data.error) {
-            card.innerHTML = data.error;
-            return;
+            const data = await res.json();
+            if (data.error) {
+                card.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">❌</div>
+                        <h3>정보를 불러올 수 없습니다</h3>
+                        <p>${data.error}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            setTrafficCache(road.link_id, data);
+            renderTraffic(data, road, marker, false);
+        } catch (e) {
+            card.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">⚠️</div>
+                    <h3>오류가 발생했습니다</h3>
+                    <p>잠시 후 다시 시도해주세요</p>
+                </div>
+            `;
         }
-
-        setTrafficCache(road.link_id, data);
-        renderTraffic(data, road, marker, false);
     }
 
-    /* =====================
-       카드 렌더링
-    ===================== */
     function renderTraffic(data, road, marker, fromCache) {
         const card = document.getElementById('trafficCard');
         const meta = CONGESTION_META[data.congestion_level];
@@ -247,27 +655,39 @@
         marker.traffic = data;
         marker.setIcon(createRoadIcon(road, map.getZoom(), data));
 
-        card.className = `traffic-card level-${data.congestion_level}`;
+        card.className = 'info-card';
         card.innerHTML = `
-        <h3>📍 ${data.road_name || road.name}</h3>
-        <div class="traffic-speed">${data.avg_speed} km/h</div>
+            <div class="traffic-card level-${data.congestion_level}">
+                <div class="card-header">
+                    <div class="road-name">
+                        📍 ${data.road_name || road.name}
+                    </div>
+                </div>
 
-        <p>${meta.icon} 혼잡도: <b>${meta.text}</b></p>
-        <p>⏱ 예상 소요 시간: ${formatTime(data.prcs_trv_time)}</p>
+                <div class="speed-display">
+                    <div class="speed-value">${data.avg_speed}</div>
+                    <div class="speed-unit">km/h</div>
+                </div>
 
-        <div style="
-            margin-top:14px;
-            height:8px;
-            background:#eee;
-            border-radius:4px;
-            overflow:hidden">
-            <div style="
-                width:${Math.min(100, data.avg_speed)}%;
-                height:100%;
-                background:${meta.color}">
+                <div class="traffic-info">
+                    <div class="info-item">
+                        <div class="info-icon">${meta.icon}</div>
+                        <div class="info-text">
+                            <div class="info-label">혼잡도</div>
+                            <div class="info-value">${meta.text}</div>
+                        </div>
+                    </div>
+
+                    <div class="info-item">
+                        <div class="info-icon">⏱️</div>
+                        <div class="info-text">
+                            <div class="info-label">예상 소요 시간</div>
+                            <div class="info-value">${formatTime(data.prcs_trv_time)}</div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-    `;
+        `;
     }
 </script>
 {% endblock %}

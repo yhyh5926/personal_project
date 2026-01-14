@@ -42,8 +42,6 @@ def latlng_to_grid(lat, lng):
 
     return nx, ny
 
-# utils/subway_utils.py
-
 SUBWAY_LINE_MAP = {
     "1001": "1호선", "1002": "2호선", "1003": "3호선", "1004": "4호선",
     "1005": "5호선", "1006": "6호선", "1007": "7호선", "1008": "8호선",

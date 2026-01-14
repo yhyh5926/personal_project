@@ -1,5 +1,6 @@
 from flask import jsonify, request
 
+from backend.analyzer.weather_plotter import generate_district_bar_plot
 from collector.weather_collector import (
     fetch_weather,
     format_weather_for_ui,
@@ -12,14 +13,21 @@ from utils.utils import latlng_to_grid
 def routes(app):
     @app.route('/api/weather')
     def get_current_weather():
+        '''
+        쿼리로 받은 인자 추출:
+        fetch(`/api/weather?lat=${d.lat}&lng=${d.lng}&district=${d.name}`);
+        '''
         lat = request.args.get('lat', type=float)
         lng = request.args.get('lng', type=float)
         district = request.args.get('district')
 
+        # 그래프 경로 반환
+        graph_path=generate_district_bar_plot(district)
+
         if lat is None or lng is None:
             return jsonify({"error": "좌표가 필요합니다"}), 400
 
-        # 격자 구하기
+        # 격자 좌표 구하기
         nx, ny = latlng_to_grid(lat, lng)
 
         weather_data = fetch_weather(nx, ny)
@@ -42,10 +50,13 @@ def routes(app):
             "measured_at": air_data.get("measured_at", "-")
         }
 
-        # 날씨 + 공기 데이터 통합 리턴
+        # 날씨 + 공기 + 그래프 경로 데이터 통합 리턴
         response = {
             "weather": formatted_weather,
-            "air": air_info
+            "air": air_info,
+            'graph_path': graph_path
         }
         save_weather(district, response)
+
+        print('요청 성공\n', response)
         return jsonify(response)

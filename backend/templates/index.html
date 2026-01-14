@@ -3,13 +3,316 @@
 {% block title %}메인{% endblock %}
 
 {% block content %}
-<h1>메인 페이지</h1>
+<div class="main-container">
+    <div class="hero-section">
+        <h1 class="hero-title">
+            <span class="hero-emoji">🏙️</span>
+            서울 실시간 정보
+        </h1>
+        <p class="hero-subtitle">필요한 정보를 한눈에 확인하세요</p>
+    </div>
 
-<div class="card">
-  <p>원하는 정보를 선택하세요.</p>
-  <ul>
-    <li>🌤 실시간 날씨 및 미세먼지</li>
-    <li>🚦 교통 정보</li>
-  </ul>
+    <div class="features-grid">
+        <a href="/weather" class="feature-card weather-card">
+            <div class="feature-icon">🌤️</div>
+            <h2 class="feature-title">날씨</h2>
+            <p class="feature-description">실시간 날씨 및 미세먼지 정보를 확인하세요</p>
+            <div class="feature-arrow">→</div>
+        </a>
+
+        <a href="/traffic" class="feature-card traffic-card">
+            <div class="feature-icon">🚦</div>
+            <h2 class="feature-title">교통 정보</h2>
+            <p class="feature-description">실시간 교통 상황과 버스 도착 정보</p>
+            <div class="feature-arrow">→</div>
+        </a>
+
+        <a href="/subway" class="feature-card subway-card">
+            <div class="feature-icon">🚇</div>
+            <h2 class="feature-title">지하철</h2>
+            <p class="feature-description">서울 지하철 실시간 도착 정보</p>
+            <div class="feature-arrow">→</div>
+        </a>
+    </div>
+
+    <div class="info-section">
+        <div class="info-card">
+            <div class="info-header">
+                <span class="info-icon">💡</span>
+                <h3>빠른 정보 확인</h3>
+            </div>
+            <p>실시간으로 업데이트되는 서울의 날씨, 교통, 지하철 정보를 한곳에서 편리하게 확인할 수 있습니다.</p>
+        </div>
+
+        <div class="info-card">
+            <div class="info-header">
+                <span class="info-icon">🎯</span>
+                <h3>간편한 사용</h3>
+            </div>
+            <p>직관적인 인터페이스로 원하는 정보를 클릭 한 번으로 바로 확인하세요.</p>
+        </div>
+
+        <div class="info-card">
+            <div class="info-header">
+                <span class="info-icon">📱</span>
+                <h3>모바일 최적화</h3>
+            </div>
+            <p>PC와 모바일 어디서든 편리하게 사용할 수 있도록 최적화되어 있습니다.</p>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .main-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px;
+    }
+
+    .hero-section {
+        text-align: center;
+        margin-bottom: 48px;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 48px 32px;
+        border-radius: 24px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+    }
+
+    .hero-title {
+        font-size: 48px;
+        font-weight: 900;
+        margin-bottom: 16px;
+        color: #1a202c;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+    }
+
+    .hero-emoji {
+        font-size: 56px;
+        animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+        0%, 100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-10px);
+        }
+    }
+
+    .hero-subtitle {
+        font-size: 20px;
+        color: #718096;
+        font-weight: 500;
+    }
+
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+        margin-bottom: 48px;
+    }
+
+    .feature-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 40px 32px;
+        text-decoration: none;
+        color: inherit;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        position: relative;
+        overflow: hidden;
+        border: 2px solid transparent;
+    }
+
+    .feature-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        opacity: 0;
+        transition: opacity 0.4s ease;
+        z-index: 0;
+    }
+
+    .feature-card:hover::before {
+        opacity: 1;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-12px) scale(1.02);
+        box-shadow: 0 30px 80px rgba(102, 126, 234, 0.5);
+        border-color: #667eea;
+    }
+
+    .feature-card:hover .feature-icon {
+        transform: scale(1.2) rotate(10deg);
+    }
+
+    .feature-card:hover .feature-title,
+    .feature-card:hover .feature-description,
+    .feature-card:hover .feature-arrow {
+        color: white;
+        position: relative;
+        z-index: 1;
+    }
+
+    .feature-icon {
+        font-size: 72px;
+        margin-bottom: 20px;
+        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        position: relative;
+        z-index: 1;
+    }
+
+    .feature-title {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 12px;
+        color: #1a202c;
+        transition: color 0.3s ease;
+        position: relative;
+        z-index: 1;
+    }
+
+    .feature-description {
+        font-size: 16px;
+        color: #718096;
+        line-height: 1.6;
+        margin-bottom: 20px;
+        transition: color 0.3s ease;
+        position: relative;
+        z-index: 1;
+    }
+
+    .feature-arrow {
+        font-size: 32px;
+        font-weight: 700;
+        color: #667eea;
+        transition: all 0.3s ease;
+        position: relative;
+        z-index: 1;
+    }
+
+    .feature-card:hover .feature-arrow {
+        transform: translateX(8px);
+    }
+
+    .info-section {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+    }
+
+    .info-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(10px);
+        transition: all 0.3s ease;
+    }
+
+    .info-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+    }
+
+    .info-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .info-icon {
+        font-size: 32px;
+    }
+
+    .info-header h3 {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1a202c;
+        margin: 0;
+    }
+
+    .info-card p {
+        font-size: 15px;
+        color: #4b5563;
+        line-height: 1.7;
+        margin: 0;
+    }
+
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 36px;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .hero-emoji {
+            font-size: 48px;
+        }
+
+        .hero-subtitle {
+            font-size: 18px;
+        }
+
+        .hero-section {
+            padding: 36px 24px;
+            margin-bottom: 32px;
+        }
+
+        .features-grid {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .feature-card {
+            padding: 32px 24px;
+        }
+
+        .feature-icon {
+            font-size: 64px;
+        }
+
+        .feature-title {
+            font-size: 24px;
+        }
+
+        .info-section {
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .hero-title {
+            font-size: 28px;
+        }
+
+        .hero-emoji {
+            font-size: 40px;
+        }
+
+        .hero-subtitle {
+            font-size: 16px;
+        }
+    }
+</style>
 {% endblock %}

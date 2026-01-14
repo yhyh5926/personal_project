@@ -3,10 +3,7 @@ import datetime
 from config import WEATHER_API_KEY, WEATHER_BASE_URL, REQUEST_TIMEOUT, SEOUL_AIR_BASE_URL, SEOUL_AIR_API_KEY
 from db import insert_data
 
-
-# -------------------------
-# 기상청 실황
-# -------------------------
+# 기상청 api 요청 시 필요한 시간
 def get_base_datetime_real_time():
     now = datetime.datetime.now()
     # API는 10분 단위로 제공되므로 가장 가까운 10분 단위로 내림
@@ -14,9 +11,10 @@ def get_base_datetime_real_time():
     base_time = now.replace(minute=minute, second=0, microsecond=0).strftime("%H%M")
     return now.strftime("%Y%m%d"), base_time
 
-
+# 기상 데이터 요청(격자 좌표로 해당 지역 데이터 구함)
 def fetch_weather(nx: int, ny: int):
     base_date, base_time = get_base_datetime_real_time()
+    #기상청 데이터 요청 인자
     params = {
         'serviceKey': WEATHER_API_KEY,
         'pageNo': 1,
@@ -29,6 +27,7 @@ def fetch_weather(nx: int, ny: int):
     }
 
     response = requests.get(WEATHER_BASE_URL, params=params, timeout=REQUEST_TIMEOUT)
+    # HTTP 상태 코드가 200이 아니면 예외 발생 (요청 실패 시 즉시 중단)
     response.raise_for_status()
     data = response.json()
     items = data.get('response', {}).get('body', {}).get('items', {}).get('item', [])
@@ -41,7 +40,18 @@ def fetch_weather(nx: int, ny: int):
     for item in items:
         if item['category'] in weather_data:
             weather_data[item['category']] = float(item.get('obsrValue'))
-
+    '''
+    형식]
+   {
+    "T1H": 23.4,   # 기온(℃)
+    "RN1": None,   # 1시간 강수량(mm) — 비 없거나 관측값 없음
+    "PTY": 0.0,    # 강수 형태 (0: 없음, 1: 비, 2: 비/눈, 3: 눈, 4: 소나기)
+    "WSD": 2.1,    # 풍속(m/s)
+    "REH": 65.0,   # 습도(%)
+    "VEC": 180.0   # 풍향(도) — 180° = 남풍
+    }
+    
+    '''
     return weather_data
 
 
@@ -49,7 +59,7 @@ def get_wind_direction(vec: float) -> str:
     directions = ["북풍", "북동풍", "동풍", "남동풍", "남풍", "남서풍", "서풍", "북서풍"]
     return directions[int((vec + 22.5) % 360 / 45)] if vec is not None else None
 
-
+# 공공데이터 용어 알기 쉽게 변환
 def format_weather_for_ui(weather):
     pty_dict = {
         0: "비 없음",
@@ -62,6 +72,7 @@ def format_weather_for_ui(weather):
         7: "눈날림"
     }
 
+    #강수 형태 (0: 없음, 1: 비, 2: 비/눈, 3: 눈, 4: 소나기...)
     pty_value = weather.get("PTY")
 
     try:
@@ -79,10 +90,7 @@ def format_weather_for_ui(weather):
     }
 
 
-# -------------------------
-# 미세먼지 데이터
-# -------------------------
-
+# 미세먼지 데이터 요청
 def fetch_air_quality_by_district(district_name):
     service = "ListAirQualityByDistrictService"
     url = f"{SEOUL_AIR_BASE_URL}/{SEOUL_AIR_API_KEY}/json/{service}/1/25"
@@ -108,9 +116,7 @@ def fetch_air_quality_by_district(district_name):
     return None
 
 
-# -------------------------
 # DB 저장
-# -------------------------
 def save_weather(region, weather):
     sql = """
           INSERT INTO WEATHER (weather_id,

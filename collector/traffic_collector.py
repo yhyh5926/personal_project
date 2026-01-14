@@ -30,7 +30,7 @@ def fetch_traffic(road):
         'ROAD_NAME': road.get("name"),
     }
 
-    print(traffic_data)
+
     save_traffic(traffic_data)
     return traffic_data
 
@@ -77,8 +77,5 @@ def save_traffic(row):
     )
 
     insert_data(sql, params)
-    print(
-        f"TRAFFIC 저장 완료 | LINK_ID={row['LINK_ID']} "
-        f"| 속도={avg_speed}km/h | 혼잡도={congestion_level}"
-    )
+
 

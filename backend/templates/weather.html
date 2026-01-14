@@ -3,149 +3,575 @@
 {% block title %}서울 날씨 대시보드{% endblock %}
 
 {% block content %}
-<h1>🌤 서울 현재 날씨</h1>
-
-<div class="weather-layout">
-    <div id="map"></div>
-
-    <div id="weatherCard" class="weather-card">
-        <div class="placeholder">지도에서 구를 클릭하세요</div>
+<div class="weather-container">
+    <div class="weather-header">
+        <div class="header-content">
+            <h1 class="main-title">
+                <span class="icon">🌤️</span>
+                서울 실시간 날씨
+            </h1>
+            <p class="subtitle">지도에서 구를 선택하여 날씨와 대기질 정보를 확인하세요</p>
+        </div>
     </div>
+
+    <div class="content-grid">
+        <div class="map-section">
+            <div id="map" class="map-container"></div>
+        </div>
+
+        <div class="info-section">
+            <div id="weatherCard" class="info-card">
+                <div class="empty-state">
+                    <div class="empty-icon">🗺️</div>
+                    <h3>구를 선택해주세요</h3>
+                    <p>지도에서 원하는 구를 클릭하면<br>실시간 날씨와 대기질 정보를 확인할 수 있습니다</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="weather-graph">
+        <h2>최근 24시간 구별 기온·미세먼지</h2>
+
+        {% if image_path %}
+        <img src="{{ image_path }}"
+             alt="서울 구별 기온·미세먼지"
+             style="width:100%; max-width:900px; border-radius:12px;
+                    box-shadow:0 4px 20px rgba(0,0,0,0.2); cursor:zoom-in;"
+             onclick="openGraphModal('{{ image_path }}')">
+        {% else %}
+        <p>최근 24시간 데이터가 없습니다.</p>
+        {% endif %}
+    </div>
+
+    <div id="graphModal" class="graph-modal">
+        <span class="graph-close">&times;</span>
+        <img id="graphModalImg">
+    </div>
+
 </div>
 {% endblock %}
 
 {% block extra_css %}
+<!-- Leaflet 지도 라이브러리 CSS: 지도 타일, 마커, 줌 버튼 등 화면 스타일 적용 -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
 <style>
-    .weather-layout {
-        display: flex;
-        gap: 24px;
-    }
 
-    /* 지도 */
-    #map {
-        width: 58%;
-        height: 520px;
-        border-radius: 16px;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-    }
-
-    /* 카드 */
-    .weather-card {
-        width: 42%;
-        background: #fff;
-        border-radius: 16px;
+    .weather-container {
+        max-width: 1400px;
+        margin: 0 auto;
         padding: 24px;
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
-        font-family: "Noto Sans KR", sans-serif;
     }
 
-    .placeholder {
-        text-align: center;
-        margin-top: 180px;
-        color: #777;
+    .weather-header {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 32px;
+        margin-bottom: 24px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        backdrop-filter: blur(10px);
     }
 
-    /* 카드 헤더 */
-    .card-header {
+    .main-title {
+        font-size: 36px;
+        font-weight: 800;
+        color: #1a202c;
         display: flex;
         align-items: center;
-        gap: 16px;
-        margin-bottom: 20px;
+        gap: 12px;
+        margin-bottom: 8px;
     }
 
-    .card-icon {
-        font-size: 52px;
+    .main-title .icon {
+        font-size: 42px;
+        animation: rotate 10s linear infinite;
     }
 
-    .card-info {
+    .weather-graph {
+        margin: 32px 0;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+
+    .weather-graph h2 {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 16px;
+    }
+
+    .graph-modal {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(4px);
+        align-items: center;
+        justify-content: center;
+    }
+
+    .graph-modal img {
+        max-width: 90%;
+        max-height: 90%;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    .graph-close {
+        position: absolute;
+        top: 20px;
+        right: 28px;
+        font-size: 36px;
+        color: white;
+        cursor: pointer;
+    }
+
+
+    @keyframes rotate {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .subtitle {
+        font-size: 16px;
+        color: #718096;
+        margin-left: 54px;
+    }
+
+    .content-grid {
+        display: grid;
+        grid-template-columns: 1.3fr 1fr;
+        gap: 24px;
+        align-items: start;
+    }
+
+    .map-section {
+        position: relative;
+    }
+
+    .map-container {
+        width: 100%;
+        height: 600px;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        border: 4px solid rgba(255, 255, 255, 0.9);
+    }
+
+    .info-section {
+        position: sticky;
+        top: 24px;
+    }
+
+    .info-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 32px;
+        min-height: 600px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+        overflow-y: auto;
+        max-height: 600px;
+    }
+
+    .info-card::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .info-card::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    .info-card::-webkit-scrollbar-thumb {
+        background: #667eea;
+        border-radius: 10px;
+    }
+
+    .empty-state {
         display: flex;
         flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        text-align: center;
+        color: #718096;
+    }
+
+    .empty-icon {
+        font-size: 80px;
+        margin-bottom: 20px;
+        opacity: 0.6;
+    }
+
+    .empty-state h3 {
+        font-size: 24px;
+        color: #2d3748;
+        margin-bottom: 12px;
+    }
+
+    .empty-state p {
+        font-size: 15px;
+        line-height: 1.6;
+    }
+
+    /* Weather Card */
+    .weather-detail {
+        animation: slideIn 0.4s ease-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .weather-hero {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 16px;
+        padding: 32px;
+        color: white;
+        text-align: center;
+        margin-bottom: 24px;
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+    }
+
+    .weather-hero-icon {
+        font-size: 80px;
+        margin-bottom: 16px;
+        animation: bounce 2s ease-in-out infinite;
+    }
+
+    @keyframes bounce {
+        0%, 100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-10px);
+        }
+    }
+
+    .weather-location {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .weather-temp {
+        font-size: 56px;
+        font-weight: 900;
+        line-height: 1;
+        margin-bottom: 8px;
+    }
+
+    .weather-status {
+        font-size: 18px;
+        opacity: 0.9;
+        margin-bottom: 12px;
+    }
+
+    .weather-time {
+        font-size: 13px;
+        opacity: 0.8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         gap: 6px;
     }
 
-    .card-temp {
-        font-size: 36px;
-        font-weight: bold;
+    /* ===============================
+       오염 원인 설명
+    =============================== */
+    .pollutant-detail {
+        margin-top: 20px;
+        padding: 20px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #fffaf0, #fef3c7);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
     }
 
-    .measured-at {
-        font-size: 13px;
-        color: #555;
+    .pollutant-title {
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        color: #92400e;
     }
 
-    /* 메타 그리드 */
-    .meta-grid {
+    .pollutant-desc {
+        font-size: 14px;
+        line-height: 1.6;
+        color: #78350f;
+    }
+
+
+    .weather-metrics {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 12px;
-        margin-bottom: 20px;
+        margin-bottom: 24px;
     }
 
-    .meta-item {
-        background: #f4f6fa;
+    .metric-card {
+        background: #f8fafc;
         border-radius: 12px;
-        padding: 14px;
+        padding: 20px;
         text-align: center;
-        font-size: 14px;
-        font-weight: 500;
-        transition: background 0.2s ease;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
     }
 
-    .meta-item:hover {
-        background: #e2e8f0;
+    .metric-card:hover {
+        background: white;
+        border-color: #667eea;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
     }
 
-    hr {
-        border: none;
-        border-top: 1px solid #e2e8f0;
+    .metric-icon {
+        font-size: 32px;
+        margin-bottom: 8px;
+    }
+
+    .metric-label {
+        font-size: 13px;
+        color: #718096;
+        margin-bottom: 4px;
+    }
+
+    .metric-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1a202c;
+    }
+
+    .divider {
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
         margin: 24px 0;
     }
 
-    /* 공기질 */
-    .air-quality h4 {
-        margin-bottom: 12px;
-        font-size: 18px;
-        font-weight: 600;
+    .section-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1a202c;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .air-quality {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border-radius: 16px;
+        padding: 24px;
     }
 
     .air-grid {
+        display: grid;
         grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
     }
 
-    /* 지도 라벨 */
-    .weather-label {
-        background: rgba(255, 255, 255, 0.95);
+    .air-item {
+        background: white;
         border-radius: 10px;
+        padding: 16px;
         text-align: center;
-        line-height: 1.2;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+        transition: all 0.3s ease;
+    }
+
+    .air-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .air-icon {
+        font-size: 28px;
+        margin-bottom: 8px;
+    }
+
+    .air-label {
+        font-size: 12px;
+        color: #718096;
+        margin-bottom: 4px;
+    }
+
+    .air-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1a202c;
+    }
+
+    /* Map Labels */
+    .weather-label {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 12px;
+        padding: 8px 12px;
+        text-align: center;
+        line-height: 1.3;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         cursor: pointer;
-        transition: transform 0.15s ease, box-shadow 0.15s ease, border 0.15s ease;
+        transition: all 0.2s ease;
+        border: 2px solid rgba(102, 126, 234, 0.3);
+        font-weight: 600;
     }
 
     .weather-label:hover {
-        transform: scale(1.05);
+        transform: scale(1.08);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+        border-color: #667eea;
     }
 
     .weather-label.active {
-        border: 2px solid #4f7cff;
-        box-shadow: 0 10px 25px rgba(79, 124, 255, 0.45);
-        transform: scale(1.08);
-        z-index: 10;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-color: #667eea;
+        transform: scale(1.12);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
+        z-index: 1000;
+    }
+
+    .loading-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        gap: 16px;
+    }
+
+    .loading-spinner {
+        width: 60px;
+        height: 60px;
+        border: 4px solid rgba(102, 126, 234, 0.2);
+        border-top-color: #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .loading-text {
+        font-size: 18px;
+        color: #667eea;
+        font-weight: 600;
+    }
+
+    @media (max-width: 1024px) {
+        .content-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .info-section {
+            position: static;
+        }
+
+        .map-container {
+            height: 400px;
+        }
+
+        .info-card {
+            min-height: 400px;
+            max-height: none;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .main-title {
+            font-size: 28px;
+        }
+
+        .main-title .icon {
+            font-size: 32px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            margin-left: 44px;
+        }
+
+        .weather-temp {
+            font-size: 48px;
+        }
+
+        .weather-metrics {
+            grid-template-columns: 1fr;
+        }
+
+        .air-grid {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
-{% endblock %}
 
+{% endblock %}
 {% block extra_js %}
+<!-- Leaflet 지도 라이브러리 JS: 지도 생성, 마커·레이어·이벤트 등 지도 동작 담당 -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<!-- Flask static 폴더의 districts.js 로드-->
 <script src="{{ url_for('static', filename='/districts.js') }}"></script>
 
 <script>
-    // 캐시 설정
+    //기본 설정
     const CACHE_TTL = 60 * 60 * 1000;
+    const markers = [];
 
+    const WEATHER_STATUS = {
+        "비 없음": {icon: "☀️", text: "맑음"},
+        비: {icon: "🌧️", text: "비"},
+        소나기: {icon: "🌦️", text: "소나기"},
+        눈: {icon: "❄️", text: "눈"},
+        "비/눈": {icon: "🌨️", text: "비/눈"},
+    };
+
+    //주요 오염물질 설명 매핑
+    const POLLUTANT_INFO = {
+        NO2: {
+            label: "교통 영향",
+            desc: "차량 배기가스 증가로 이산화질소(NO₂) 농도가 높아졌어요.",
+        },
+        "PM-10": {
+            label: "외부 먼지",
+            desc: "황사나 외부 유입 먼지 영향으로 미세먼지가 많아요.",
+        },
+        "PM-2.5": {
+            label: "연소 영향",
+            desc: "난방·연소 과정에서 발생한 초미세먼지가 원인이에요.",
+        },
+        O3: {
+            label: "강한 햇빛",
+            desc: "강한 햇빛과 오염물질 반응으로 오존이 생성됐어요.",
+        },
+        SO2: {
+            label: "산업 영향",
+            desc: "연료 연소로 이산화황 농도가 높아졌어요.",
+        },
+        CO: {
+            label: "불완전 연소",
+            desc: "차량이나 보일러의 불완전 연소 영향이에요.",
+        },
+    };
+
+    //캐시
     function getCache(key) {
         const raw = localStorage.getItem(key);
         if (!raw) return null;
@@ -158,134 +584,275 @@
     }
 
     function setCache(key, data) {
-        localStorage.setItem(key, JSON.stringify({time: Date.now(), data}));
+        localStorage.setItem(
+                key,
+                JSON.stringify({
+                    time: Date.now(),
+                    data,
+                })
+        );
     }
 
-    // 날씨 상태
-    const WEATHER_STATUS = {
-        '비 없음': {icon: '☀️', text: '맑음'},
-        '비': {icon: '🌧', text: '비'},
-        '소나기': {icon: '🌦', text: '소나기'},
-        '눈': {icon: '❄️', text: '눈'},
-        '비/눈': {icon: '🌨', text: '비/눈'}
-    };
+    // Leaflet 지도 생성: 'map' div에 서울 좌표로 초기화, 줌 레벨 11
+    const map = L.map("map").setView([37.5665, 126.978], 11);
 
-    // 지도 초기화
-    const map = L.map('map').setView([37.5665, 126.9780], 11);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap & CARTO',
-        subdomains: 'abcd',
-        maxZoom: 19
-    }).addTo(map);
+    L.tileLayer(
+            "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+            {
+                // 지도 데이터 출처 표시
+                attribution: "&copy; OpenStreetMap & CARTO",
+                // 지도에서 허용하는 최대 확대 수준
+                maxZoom: 19,
+            }
+    ).addTo(map); // CARTO 지도 타일을 불러와 map에 추가 (실제 지도 배경)
 
-    const markers = [];
-
+    // 아이콘 (줌에 따라 크기 변환)
     function getLabelSpec(zoom) {
-        if (zoom >= 12) return {font: 14, pad: '6px 10px', size: [95, 48]};
-        if (zoom >= 11) return {font: 12, pad: '4px 8px', size: [80, 40]};
-        if (zoom >= 10) return {font: 10, pad: '3px 6px', size: [65, 32]};
+        if (zoom >= 12) return {size: [110, 56]};
+        if (zoom >= 11) return {size: [95, 48]};
+        if (zoom >= 10) return {size: [80, 40]};
         return null;
     }
 
-    function createIcon(d, temp, rainType, zoom) {
+    //구 이름만 표시하는 아이콘 (초기)
+    function createNameOnlyIcon(name, zoom) {
         const spec = getLabelSpec(zoom);
         if (!spec) return null;
-        const status = WEATHER_STATUS[rainType] || WEATHER_STATUS['비 없음'];
+
         return L.divIcon({
-            className: '',
-            html: `<div class="weather-label"><div>${d.name}</div><div><b>${status.icon} ${temp}°C</b></div></div>`,
+            className: "",
+            html: `
+                    <div class="weather-label">
+                        <div><b>${name}</b></div>
+                    </div>
+                `,
             iconSize: spec.size,
-            iconAnchor: [spec.size[0] / 2, spec.size[1] / 2]
+            iconAnchor: [spec.size[0] / 2, spec.size[1] / 2],
         });
     }
 
-    // 구별 날씨 로드
-    async function loadDistrict(d) {
+    // 아이콘 (클릭 후 온도 추가)
+    function createWeatherIcon(name, temp, rainType, zoom) {
+        const spec = getLabelSpec(zoom);
+        if (!spec) return null;
+
+        const status = WEATHER_STATUS[rainType] || WEATHER_STATUS["비 없음"];
+
+        return L.divIcon({
+            className: "",
+            html: `
+                    <div class="weather-label">
+                        <div>${name}</div>
+                        <div><b>${status.icon} ${temp}°C</b></div>
+                    </div>
+                `,
+            iconSize: spec.size,
+            iconAnchor: [spec.size[0] / 2, spec.size[1] / 2],
+        });
+    }
+
+    //API 호출 (클릭 시)
+    async function fetchDistrictWeather(d) {
         const key = `weather_${d.name}`;
         let data = getCache(key);
+
         if (!data) {
-            const res = await fetch(`/api/weather?lat=${d.lat}&lng=${d.lng}&district=${d.name}`);
+            const res = await fetch(
+                    `/api/weather?lat=${d.lat}&lng=${d.lng}&district=${d.name}`
+            );
             data = await res.json();
-            if (data.error) return;
+            if (data.error) throw new Error(data.error);
             setCache(key, data);
         }
+        return data;
+    }
 
+    // measured_at 포맷 변환 : 202601131200 -> 2026년 1월 13일 12시
+    function formatMeasuredAt(raw) {
+        const y = raw.slice(0, 4);
+        const m = raw.slice(4, 6);
+        const d = raw.slice(6, 8);
+        const h = raw.slice(8, 10);
+        const min = raw.slice(10, 12);
+        return `${y}년 ${m}월 ${d}일 ${h}시${min !== "00" ? min + "분" : ""}`;
+    }
+
+    //그래프 사진 확대 보기
+    function openGraphModal(src) {
+        const modal = document.getElementById("graphModal");
+        const img = document.getElementById("graphModalImg");
+        img.src = src;
+        modal.style.display = "flex";
+    }
+
+    document.addEventListener("click", (e) => {
+        if (
+                e.target.classList.contains("graph-close") ||
+                e.target.id === "graphModal"
+        ) {
+            document.getElementById("graphModal").style.display = "none";
+        }
+    });
+
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") {
+            const modal = document.getElementById("graphModal");
+            if (modal && modal.style.display === "flex") {
+                modal.style.display = "none";
+            }
+        }
+    });
+
+    // 날씨 정보창 보기
+    function showDetail(name, data) {
         const w = data.weather;
-        const marker = L.marker([d.lat, d.lng]).addTo(map);
-        marker._weather = {district: d, temp: w.temperature, rainType: w.rain_type, data};
-        marker.setIcon(createIcon(d, w.temperature, w.rain_type, map.getZoom()));
-        marker.on('click', () => {
-            document.querySelectorAll('.weather-label.active').forEach(el => el.classList.remove('active'));
-            const el = marker.getElement()?.querySelector('.weather-label');
-            if (el) el.classList.add('active');
-            showDetail(d.name, data);
+        const a = data.air;
+        const status = WEATHER_STATUS[w.rain_type] || WEATHER_STATUS["비 없음"];
+
+        const pollutant = POLLUTANT_INFO[a.main_pollutant] || {
+            label: "복합 영향",
+            desc: "여러 오염원이 복합적으로 작용하고 있어요.",
+        };
+
+        document.getElementById("weatherCard").innerHTML = `
+               <div class="weather-detail">
+      <div class="weather-hero">
+        <div class="weather-hero-icon">${status.icon}</div>
+        <div class="weather-location">${name}</div>
+        <div class="weather-temp">${w.temperature}°C</div>
+        <div class="weather-status">${status.text}</div>
+
+        <div class="weather-time">🕒 ${formatMeasuredAt(a.measured_at)}</div>
+      </div>
+
+      <!-- 기상 상세 -->
+      <div class="weather-metrics">
+        <div class="metric-card">
+          <div class="metric-icon">💨</div>
+          <div class="metric-label">풍속</div>
+          <div class="metric-value">${w.wind_speed} m/s</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon">🧭</div>
+          <div class="metric-label">풍향</div>
+          <div class="metric-value">${w.wind_direction}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon">💧</div>
+          <div class="metric-label">습도</div>
+          <div class="metric-value">${w.humidity}%</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon">🌧️</div>
+          <div class="metric-label">강수량</div>
+          <div class="metric-value">${w.precipitation || 0} mm</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+
+      <!-- 대기질 -->
+      <div class="air-quality">
+        <div class="section-title">🌫️ 대기환경</div>
+        <div class="air-grid">
+          <div class="air-item"><b>대기질</b><br />${a.air_grade}</div>
+          <div class="air-item"><b>PM10</b><br />${a.pm10}</div>
+          <div class="air-item"><b>PM2.5</b><br />${a.pm2_5}</div>
+          <div class="air-item">
+            <b>주요 오염물질</b><br />${a.main_pollutant}
+          </div>
+        </div>
+
+        <!-- 오염 원인 설명 -->
+        <div class="pollutant-detail">
+          <div class="pollutant-title">🔍 ${pollutant.label}</div>
+          <div class="pollutant-desc">${pollutant.desc}</div>
+        </div>
+      </div>
+
+      <!-- 그래프 -->
+      <div class="weather-graph" style="margin-top: 24px">
+        <h2>최근 48시간 기온·미세먼지</h2>
+        ${
+                data.graph_path
+                ? `
+                <img
+                src="${data.graph_path}"
+                style="width: 100%; max-width: 800px; cursor: zoom-in"
+                onclick="openGraphModal('${data.graph_path}')"
+                />
+                `
+                : `
+                <p>그래프 데이터가 없습니다.</p>
+                `
+                }
+      </div>
+    </div>
+            `;
+    }
+
+    //마커 생성 (구 이름만)
+    function createMarker(d) {
+        const marker = L.marker([d.lat, d.lng], {
+            icon: createNameOnlyIcon(d.name, map.getZoom()),
+        }).addTo(map);
+
+        marker.on("click", async () => {
+            document
+                    .querySelectorAll(".weather-label.active")
+                    .forEach((el) => el.classList.remove("active"));
+
+            document.getElementById("weatherCard").innerHTML = `
+                    <div class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">불러오는 중...</div>
+                    </div>
+                `;
+
+            try {
+                const data = await fetchDistrictWeather(d);
+                showDetail(d.name, data);
+
+                marker.setIcon(
+                        createWeatherIcon(
+                                d.name,
+                                data.weather.temperature,
+                                data.weather.rain_type,
+                                map.getZoom()
+                        )
+                );
+
+                marker
+                        .getElement()
+                        ?.querySelector(".weather-label")
+                        ?.classList.add("active");
+            } catch (e) {
+                alert("데이터 로딩 실패");
+            }
         });
+
         markers.push(marker);
     }
 
-    // 줌 변경
-    map.on('zoomend', () => {
+    //줌 변경 시 아이콘 유지
+
+    map.on("zoomend", () => {
         const zoom = map.getZoom();
-        markers.forEach(m => {
-            const icon = createIcon(m._weather.district, m._weather.temp, m._weather.rainType, zoom);
-            if (icon) {
-                m.setOpacity(1);
-                m.setIcon(icon);
-            } else {
-                m.setOpacity(0);
+        markers.forEach((m) => {
+            const el = m.getElement();
+            if (!el) return;
+
+            const text = el.innerText;
+            const name = text.split("\n")[0];
+            const hasTemp = text.includes("°C");
+
+            if (!hasTemp) {
+                m.setIcon(createNameOnlyIcon(name, zoom));
             }
         });
     });
 
-    // 발표시간 포맷
-    function formatMeasuredAt(raw) {
-        const year = raw.slice(0, 4);
-        const month = parseInt(raw.slice(4, 6), 10);
-        const day = parseInt(raw.slice(6, 8), 10);
-        const hour = parseInt(raw.slice(8, 10), 10);
-        const min = raw.slice(10, 12);
-        return `${year}년 ${month}월 ${day}일 ${hour}시${min !== '00'? min+'분':''}`;
-    }
-
-    // 상세 카드
-    function showDetail(name, data) {
-        const w = data.weather;
-        const a = data.air;
-        const status = WEATHER_STATUS[w.rain_type] || WEATHER_STATUS['비 없음'];
-
-        document.getElementById('weatherCard').innerHTML = `
-<div class="card-header">
-    <div class="card-icon">${status.icon}</div>
-    <div class="card-info">
-        <strong>${name}</strong>
-        <div class="card-temp">${w.temperature}°C</div>
-        <small>${status.text}</small>
-        <div class="measured-at">🕒 발표 시간: ${formatMeasuredAt(a.measured_at)}</div>
-    </div>
-</div>
-
-<div class="meta-grid">
-    <div class="meta-item">💧 습도<br>${w.humidity}%</div>
-    <div class="meta-item">💨 풍속<br>${w.wind_speed} m/s</div>
-    <div class="meta-item">☔ 강수량<br>${w.precipitation || 0} mm</div>
-    <div class="meta-item">🧭 풍향<br>${w.wind_direction}</div>
-</div>
-
-<hr>
-
-<div class="air-quality">
-    <h4>대기환경</h4>
-    <div class="meta-grid air-grid">
-        <div class="meta-item">🏙️ 대기질<br>${a.air_grade}</div>
-        <div class="meta-item">🌫️ 미세먼지<br>${a.pm10} µg/m³</div>
-        <div class="meta-item">🌫️ 초미세먼지<br>${a.pm2_5} µg/m³</div>
-        <div class="meta-item">⚠️ 주요 오염물질<br>${a.main_pollutant}</div>
-    </div>
-</div>`;
-    }
-
-    // 초기 실행
-    SEOUL_DISTRICTS.forEach(loadDistrict);
+    //초기 로딩 (마커만 생성)
+    SEOUL_DISTRICTS.forEach(createMarker);
 
 </script>
 {% endblock %}

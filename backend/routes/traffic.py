@@ -11,7 +11,7 @@ def routes(app):
 
         if not data:
             return jsonify({"error": f"{road['link_id']}에 대한 교통 데이터 없음"}), 200
-
+        print('요청 성공\n', data)
         return jsonify({
             "link_id": data["LINK_ID"],
             "avg_speed": data["AVG_SPEED"],

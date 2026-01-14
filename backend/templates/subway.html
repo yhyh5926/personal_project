@@ -3,56 +3,378 @@
 {% block title %}서울 지하철 정보{% endblock %}
 
 {% block content %}
-<h1>🚇 서울 지하철 실시간 도착 정보</h1>
+<div class="subway-container">
+    <div class="subway-header">
+        <div class="header-content">
+            <h1 class="main-title">
+                <span class="icon">🚇</span>
+                서울 지하철 실시간 정보
+            </h1>
+            <p class="subtitle">지도에서 역을 선택하여 실시간 도착 정보를 확인하세요</p>
+        </div>
+    </div>
 
-<div class="traffic-layout">
-    <div id="map"></div>
+    <div class="content-grid">
+        <div class="map-section">
+            <div id="map" class="map-container"></div>
+        </div>
 
-    <div id="trafficCard" class="traffic-card">
-        <p class="placeholder">지도에서 역을 클릭하세요.</p>
+        <div class="info-section">
+            <div id="trafficCard" class="info-card">
+                <div class="empty-state">
+                    <div class="empty-icon">🗺️</div>
+                    <h3>역을 선택해주세요</h3>
+                    <p>지도에서 원하는 역을 클릭하면<br>실시간 도착 정보를 확인할 수 있습니다</p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+<button id="refreshBtn">🔄 새로고침</button>
+
+
 {% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
 <style>
-    .traffic-layout {
-        display: flex;
-        gap: 24px;
-    }
 
-    #map {
-        width: 55%;
-        height: 520px;
-        border-radius: 14px;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, .15);
-    }
 
-    .traffic-card {
-        width: 45%;
-        border-radius: 14px;
+    .subway-container {
+        max-width: 1400px;
+        margin: 0 auto;
         padding: 24px;
-        background: #f6f8fb;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, .15);
-        font-size: 14px;
     }
 
-    .placeholder {
+    .subway-header {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 32px;
+        margin-bottom: 24px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        backdrop-filter: blur(10px);
+    }
+
+    .main-title {
+        font-size: 36px;
+        font-weight: 800;
+        color: #1a202c;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+    }
+
+    .main-title .icon {
+        font-size: 42px;
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.1);
+        }
+    }
+
+    .subtitle {
+        font-size: 16px;
+        color: #718096;
+        margin-left: 54px;
+    }
+
+    .content-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 24px;
+        align-items: start;
+    }
+
+    .map-section {
+        position: relative;
+    }
+
+    .map-container {
+        width: 100%;
+        height: 600px;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        border: 4px solid rgba(255, 255, 255, 0.9);
+    }
+
+    .info-section {
+        position: sticky;
+        top: 24px;
+    }
+
+    .info-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 16px;
+        min-height: 600px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+        overflow-y: auto;
+        max-height: 600px;
+    }
+
+    .info-card::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .info-card::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    .info-card::-webkit-scrollbar-thumb {
+        background: #667eea;
+        border-radius: 10px;
+    }
+
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
         text-align: center;
-        color: #777;
-        margin-top: 200px;
+        color: #718096;
+    }
+
+    .empty-icon {
+        font-size: 80px;
+        margin-bottom: 20px;
+        opacity: 0.6;
+    }
+
+    .empty-state h3 {
+        font-size: 24px;
+        color: #2d3748;
+        margin-bottom: 12px;
+    }
+
+    .empty-state p {
+        font-size: 15px;
+        line-height: 1.6;
+    }
+
+    .subway-cards-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+
+    .subway-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 14px;
+        padding: 20px;
+        color: white;
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+        transition: transform 0.2s, box-shadow 0.2s;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .subway-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 28px rgba(102, 126, 234, 0.4);
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .station-name {
+        font-size: 20px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .line-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        color: white;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .card-info {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+
+    .info-item {
+        background: rgba(255, 255, 255, 0.15);
+        padding: 8px 12px;
+        border-radius: 8px;
+        backdrop-filter: blur(10px);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .info-label {
+        font-size: 11px;
+        opacity: 0.9;
+    }
+
+    .info-value {
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .arrival-time {
+        background: rgba(255, 255, 255, 0.95);
+        color: #667eea;
+        padding: 16px;
+        border-radius: 10px;
+        text-align: center;
+        margin-bottom: 12px;
+    }
+
+    .arrival-time h2 {
+        font-size: 16px;
+        font-weight: 900;
+        margin: 0;
+    }
+
+    .arrival-message {
+        background: rgba(255, 255, 255, 0.15);
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        line-height: 1.5;
+        backdrop-filter: blur(10px);
     }
 
     .station-label {
-        padding: 6px 10px;
-        border-radius: 10px;
+        display: inline-block;
+        padding: 8px 12px;
+        border-radius: 12px;
         font-size: 13px;
-        background: #fff;
+        font-weight: 600;
+        background: white;
         white-space: nowrap;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, .25);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid #667eea;
+    }
+
+    .station-label:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .station-label.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        transform: scale(1.15);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.6);
+        z-index: 1000;
+    }
+
+    .loading-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        gap: 16px;
+    }
+
+    .loading-spinner {
+        width: 60px;
+        height: 60px;
+        border: 4px solid rgba(102, 126, 234, 0.2);
+        border-top-color: #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+
+    #refreshBtn {
+        position: fixed;
+        bottom: 10px;
+        right: 10px;
+        z-index: 1000;
+        background-color: #667eea;
+        color: #fff;
+        border: none;
+        padding: 8px 14px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    #refreshBtn:hover {
+        background-color: #5563c1;
+    }
+
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .loading-text {
+        font-size: 18px;
+        color: #667eea;
+        font-weight: 600;
+    }
+
+
+    @media (max-width: 1024px) {
+        .content-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .info-section {
+            position: static;
+        }
+
+        .map-container {
+            height: 400px;
+        }
+
+        .info-card {
+            min-height: 400px;
+            max-height: none;
+        }
+
+
+    }
+
+    @media (max-width: 768px) {
+
+        .station-name {
+            font-size: 18px;
+        }
+
+        .arrival-time h2 {
+            font-size: 28px;
+        }
     }
 </style>
 {% endblock %}
@@ -62,13 +384,43 @@
 <script src="{{ url_for('static', filename='stations.js') }}"></script>
 
 <script>
-    /* =====================
-       지도 초기화
-    ===================== */
+    // 서울 지하철 호선 색상
+    const LINE_COLORS = {
+        '1호선': '#0052A4',
+        '2호선': '#00A84D',
+        '3호선': '#EF7C1C',
+        '4호선': '#00A5DE',
+        '5호선': '#996CAC',
+        '6호선': '#CD7C2F',
+        '7호선': '#747F00',
+        '8호선': '#E6186C',
+        '9호선': '#BDB092',
+        '경의중앙선': '#77C4A3',
+        '공항철도': '#0090D2',
+        '경춘선': '#0C8E72',
+        '수인분당선': '#FABE00',
+        '신분당선': '#D31145',
+        '의정부경전철': '#FFA500',
+        '용인경전철': '#FFCD12',
+        '우이신설선': '#B7C450',
+        '김포골드라인': '#A17E48',
+        '신림선': '#6789CA'
+    };
+
+    function getLineColor(lineName) {
+        // 호선명에서 키워드 추출
+        for (const [key, color] of Object.entries(LINE_COLORS)) {
+            if (lineName.includes(key.replace('호선', ''))) {
+                return color;
+            }
+        }
+        return '#667eea'; // 기본 색상
+    }
+
     const map = L.map('map').setView([37.5665, 126.9780], 11);
 
     L.tileLayer(
-            'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
+            'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
             {
                 attribution: '&copy; OpenStreetMap & CARTO',
                 subdomains: 'abcd',
@@ -76,10 +428,9 @@
             }
     ).addTo(map);
 
-    /* =====================
-       역 마커 생성
-    ===================== */
     const stationMarkers = [];
+    let currentStation = null; // 현재 선택된 역 이름 저장
+
 
     SEOUL_STATIONS.forEach(station => {
         const marker = L.marker(
@@ -88,27 +439,56 @@
         ).addTo(map);
 
         marker.station = station;
-        marker.on('click', () => fetchSubway(station.name));
+        marker.on('click', () => {
+            // 모든 active 클래스 제거
+            document.querySelectorAll('.station-label.active').forEach(el => {
+                el.classList.remove('active');
+            });
+
+            // 클릭된 마커에 active 클래스 추가
+            const labelEl = marker.getElement()?.querySelector('.station-label');
+            if (labelEl) {
+                labelEl.classList.add('active');
+            }
+            currentStation = station.name;
+            fetchSubway(station.name);
+        });
 
         stationMarkers.push(marker);
     });
+    // 새로고침 버튼 이벤트
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+        if (currentStation) {
+            fetchSubway(currentStation);
+        } else {
+            const card = document.getElementById('trafficCard');
+            card.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">ℹ️</div>
+                    <h3>역을 먼저 선택해주세요</h3>
+                </div>
+            `;
+        }
+    });
 
-    /* =====================
-       줌 변경 시 라벨 갱신
-    ===================== */
     map.on('zoomend', () => {
         const zoom = map.getZoom();
         stationMarkers.forEach(m => {
-            m.setIcon(createStationIcon(m.station, zoom));
+            const icon = createStationIcon(m.station, zoom);
+            if (icon) {
+                m.setIcon(icon);
+                m.setOpacity(1);
+            } else {
+                m.setOpacity(0);
+            }
         });
     });
 
-    /* =====================
-       라벨 아이콘
-    ===================== */
     function createStationIcon(station, zoom) {
-        let label = '🚇';
-        if (zoom >= 12) label = station.name;
+        // 줌 레벨이 11 미만이면 라벨 숨김
+        if (zoom < 11) return null;
+
+        const label = station.name;
 
         return L.divIcon({
             html: `<div class="station-label">${label}</div>`,
@@ -118,50 +498,91 @@
         });
     }
 
-    /* =====================
-       지하철 API 호출
-    ===================== */
     async function fetchSubway(station_name) {
         const card = document.getElementById('trafficCard');
-        card.innerHTML = '🚇 지하철 정보 불러오는 중...';
+        card.innerHTML = `
+            <div class="loading-state">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">실시간 정보를 불러오는 중...</div>
+            </div>
+        `;
 
         try {
             const res = await fetch(`/api/subway?station=${station_name}`);
-
             const data = await res.json();
+
             if (data.error) {
-                card.innerHTML = data.error;
+                card.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">❌</div>
+                        <h3>정보를 불러올 수 없습니다</h3>
+                        <p>${data.error}</p>
+                    </div>
+                `;
                 return;
             }
 
-            renderSubwayCard(data);
+            renderSubwayCards(data);
         } catch (e) {
-            card.innerHTML = '❌ 정보를 불러오지 못했습니다.';
+            card.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">⚠️</div>
+                    <h3>오류가 발생했습니다</h3>
+                    <p>잠시 후 다시 시도해주세요</p>
+                </div>
+            `;
         }
     }
 
-    /* =====================
-       카드 렌더링
-    ===================== */
-    function renderSubwayCard(data) {
-        const card = document.getElementById('trafficCard');
-        console.log('요청 성공',data)
-        card.innerHTML = `
-        <h3>🚉 ${data.current_station}</h3>
+    function renderSubwayCards(dataArray) {
+        const cardContainer = document.getElementById('trafficCard');
+        cardContainer.innerHTML = '';
 
-        <p>🚇 노선: <b>${data.line}</b></p>
-        <p>🚆 열차 종류: ${data.train_type || '-'}</p>
-        <p>↕️ 방향: ${data.direction}</p>
-        <p>🎯 종착역: ${data.destination}</p>
+        const grid = document.createElement('div');
+        grid.className = 'subway-cards-grid';
 
-        <hr>
+        dataArray.forEach(data => {
+            const card = document.createElement('div');
+            card.className = 'subway-card';
 
-        <h2 style="font-size:32px;margin:12px 0">
-            ⏱ ${data.arrival_in}
-        </h2>
+            const lineColor = getLineColor(data.line);
 
-        <p>📢 ${data.arrival_message}</p>
-    `;
+            card.innerHTML = `
+                <div class="card-header">
+                    <div class="station-name">
+                        🚉 ${data.current_station}
+                    </div>
+                    <div class="line-badge" style="background-color: ${lineColor};">${data.line}</div>
+                </div>
+
+                <div class="card-info">
+                    <div class="info-item">
+                        <span class="info-label">🚆 열차</span>
+                        <span class="info-value">${data.train_type || '-'}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">↕️ 방향</span>
+                        <span class="info-value">${data.direction}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">🎯 종착</span>
+                        <span class="info-value">${data.destination}</span>
+                    </div>
+                </div>
+
+                <div class="arrival-time">
+                    <h2>⏱ ${data.arrival_in}</h2>
+                </div>
+
+                <div class="arrival-message">
+                    📢 ${data.arrival_message}
+                </div>
+            `;
+
+            grid.appendChild(card);
+        });
+
+        cardContainer.appendChild(grid);
     }
 </script>
 {% endblock %}
