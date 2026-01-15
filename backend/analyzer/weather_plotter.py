@@ -8,9 +8,8 @@ from datetime import timedelta
 
 from collector.db import select_data, select_district
 
-# ==================================================
 # 한글 폰트 설정 (Windows - PyCharm 기준)
-# ==================================================
+
 font_path = "C:/02WorkSpaces/personal_project/resData/malgun.ttf"  # 맑은 고딕
 font_name = fm.FontProperties(fname=font_path).get_name()
 
@@ -18,9 +17,8 @@ mpl.rcParams["font.family"] = font_name
 mpl.rcParams["axes.unicode_minus"] = False  # - 기호 깨짐 방지
 
 
-# ==================================================
 # 최근 48시간 WEATHER 데이터 로드
-# ==================================================
+
 def load_weather_df():
     sql = """
           SELECT region,
@@ -47,10 +45,8 @@ def load_weather_df():
     return df
 
 
-# ==================================================
-# 기온 + 미세먼지 그래프 생성 (단일 PNG)
-# ==================================================
 
+# 기온 + 미세먼지 그래프 생성 (단일 PNG)
 
 def generate_weather_bar_plot(df):
     if df.empty:
@@ -241,9 +237,7 @@ def generate_district_bar_plot(district_name):
     return f"/static/images/{district_name}_bar.png"
 
 
-# ==================================================
 # 단독 실행용 (테스트)
-# ==================================================
 if __name__ == "__main__":
     df = load_weather_df()
     path = generate_weather_bar_plot(df)

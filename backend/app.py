@@ -23,6 +23,9 @@ subway.routes(app)
 def index():
     return render_template('index.html')
 
+@app.route('/ppt')
+def ppt_page():
+    return render_template('ppt.html')
 
 @app.route('/weather')
 def weather_page():

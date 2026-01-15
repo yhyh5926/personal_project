@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Seoul Project - Final Presentation</title>
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            overflow: hidden;
+        }
+
+        .deck {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px 100px;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.5s ease;
+            transform: scale(0.95);
+            background: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%);
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            transform: scale(1);
+        }
+
+        /* Typography */
+        h1 {
+            font-size: 4rem;
+            margin-bottom: 10px;
+            color: #ffffff;
+            font-weight: 800;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 2.5rem;
+            color: #38bdf8;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #38bdf8;
+            padding-bottom: 10px;
+            width: 100%;
+            max-width: 1100px;
+        }
+
+        h3 {
+            color: #818cf8;
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+        }
+
+        p {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            color: #94a3b8;
+        }
+
+        /* Grid & Cards */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+            width: 100%;
+            max-width: 1100px;
+        }
+
+        .card {
+            background: rgba(30, 41, 59, 0.8);
+            padding: 25px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card ul {
+            padding-left: 20px;
+            color: #cbd5e1;
+        }
+
+        .card li {
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        /* Buttons & Controls */
+        .controls {
+            position: fixed;
+            bottom: 30px;
+            right: 50px;
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .btn {
+            background: #334155;
+            border: none;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: 0.3s;
+        }
+
+        .btn:hover {
+            background: #4f46e5;
+        }
+
+        .btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .progress-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: #1e293b;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #4f46e5;
+            width: 0%;
+            transition: 0.3s;
+        }
+    </style>
+</head>
+<body>
+
+<div class="progress-container">
+    <div class="progress-fill" id="progress"></div>
+</div>
+
+<div class="deck">
+    <div class="slide active">
+        <h3 style="color: #38bdf8;">Personal Project</h3>
+        <h1>My Seoul Dashboard</h1>
+        <p>공공데이터를 활용한 서울 생활 정보 통합 플랫폼</p>
+        <div style="margin-top: 50px; text-align: center;">
+            <p>Python Flask | Oracle DB | Leaflet.js</p>
+        </div>
+    </div>
+
+    <div class="slide">
+        <h2>1. 기획 의도</h2>
+        <div class="grid">
+            <div class="card">
+                <h3>배경 및 해결 문제</h3>
+                <ul>
+                    <li>날씨, 교통, 지하철 정보가 각기 다른 사이트에 파편화됨</li>
+                    <li>공공데이터 API의 복잡한 응답 구조를 직관적으로 시각화할 필요성</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3>목표 및 효과</h3>
+                <ul>
+                    <li>지도(Leaflet) 기반의 원스톱 정보 대시보드 구축</li>
+                    <li>데이터 분석(Matplotlib)을 통한 과거 추이 제공</li>
+                    <li>실시간성 보장 및 로컬 캐싱을 통한 성능 최적화</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide">
+        <h2>2. 기술 스택</h2>
+        <div class="grid">
+            <div class="card">
+                <h3>Languages & Frameworks</h3>
+                <ul>
+                    <li><b>Backend:</b> Python, Flask</li>
+                    <li><b>Frontend:</b> JavaScript, HTML5, CSS3</li>
+                    <li><b>Library:</b> Leaflet.js, Pandas, Matplotlib</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3>Data & DevOps</h3>
+                <ul>
+                    <li><b>Database:</b> Oracle</li>
+                    <li><b>API:</b> 기상청 예보, 서울시 교통 정보, 지하철 도착 정보</li>
+                    <li><b>Tool:</b> PyCharm</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide">
+        <h2>3. 구현 과정</h2>
+
+        <div class="grid">
+            <div class="card">
+                <h3>전체 구조</h3>
+                <ul>
+                    <li><b>Collector:</b> 외부 API 데이터를 정제하여 DB 저장</li>
+                    <li><b>Analyzer:</b> Pandas를 통한 통계 및 그래프 생성</li>
+                    <li><b>API Routes:</b> 클라이언트 요청에 따른 JSON 반환</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3>주요 기능</h3>
+                <ul>
+                    <li><b>LCC 격자 변환:</b> 위경도를 기상 격자로 좌표 변환</li>
+                    <li><b>Traffic Cache:</b> LocalStorage 기반 TTL 캐싱</li>
+
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide">
+        <h2>4. 결과물</h2>
+        <div class="grid">
+            <div class="card">
+                <h3>데이터 시각화 (날씨)</h3>
+                <p>Matplotlib을 활용하여 48시간 기온/미세먼지 변화를 이중 막대 그래프로 생성하여 제공</p>
+            </div>
+            <div class="card">
+                <h3>실시간 대시보드 (교통/지하철)</h3>
+                <p>Leaflet 마커 클릭 시 실시간 도착 시간 및 도로 속도를 카드 레이아웃으로 출력</p>
+            </div>
+        </div>
+    </div>
+    <div class="slide">
+        <h2>5. 향후 개선 계획 (ML/DL 기반 교통량 예측)</h2>
+        <div class="grid">
+            <div class="card">
+                <h3>지능형 교통 예측 모델 구축</h3>
+                <ul>
+                    <li><b>[딥러닝] LSTM 기반 시계열 예측</b><br>
+                        도로별 과거 속도 변화 패턴을 학습하여, 30분~1시간 뒤의 미래 정체 상황을 정밀하게 예측.
+                    </li>
+                    <li><b>[머신러닝] 날씨-교통 상관관계 분석</b><br>
+                        비, 눈, 기온 등 기상 변수가 도로별 통행 속도에 미치는 영향을 데이터로 수치화하여 반영.
+                    </li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>데이터 기반 지능형 서비스</h3>
+                <ul>
+                    <li><b>선제적 정체 알림</b><br>
+                        단순히 "지금 막힌다"가 아니라, "퇴근 정체가 곧 시작되니 지금 출발하세요"라는 예측 가이드를 제공.
+                    </li>
+                    <li><b>AI 최적 경로 추천</b><br>
+                        날씨에 따른 사고 위험도와 예상 정체 시간을 계산하여, 목적지까지 가장 쾌적하고 빠른 길을 추천.
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="controls">
+    <button class="btn" id="prevBtn" disabled><i class="fa-solid fa-arrow-left"></i></button>
+    <button class="btn" id="nextBtn"><i class="fa-solid fa-arrow-right"></i></button>
+</div>
+
+<script>
+    const slides = document.querySelectorAll('.slide');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const progress = document.getElementById('progress');
+    let current = 0;
+
+    function update() {
+        slides.forEach((s, i) => s.classList.toggle('active', i === current));
+        prevBtn.disabled = current === 0;
+        nextBtn.disabled = current === slides.length - 1;
+        progress.style.width = ((current + 1) / slides.length) * 100 + "%";
+    }
+
+    nextBtn.onclick = () => {
+        if (current < slides.length - 1) {
+            current++;
+            update();
+        }
+    };
+    prevBtn.onclick = () => {
+        if (current > 0) {
+            current--;
+            update();
+        }
+    };
+    document.onkeydown = (e) => {
+        if (e.key === "ArrowRight") nextBtn.onclick();
+        if (e.key === "ArrowLeft") prevBtn.onclick();
+    };
+</script>
+</body>
+</html>
